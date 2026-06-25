@@ -4,7 +4,7 @@
 **Produto:** Tarefo — Plataforma de Gestão de Tarefas e Comunicação Interna
 **Documento:** Minuta de Entendimento (v2) — para avaliação e aprovação antes da construção
 **Data:** 25/06/2026
-**Status:** 🟢 Decisões 1–8 validadas — pendente apenas item 9 (idioma/fuso) e detalhes das integrações
+**Status:** 🟢 **Minuta aprovada** — todas as decisões validadas; pendente apenas o envio das credenciais das integrações
 
 > **Para que serve este documento:** registrar, de forma clara, *o que entendemos* que
 > deve ser construído, *como* pretendemos construir e *em que ordem*. Ele é a base de
@@ -144,7 +144,7 @@ Entidades principais e como se relacionam (resumo):
 | Tempo real | WebSocket (Socket.IO) | Chat e notificações instantâneas |
 | Anexos | Storage em nuvem (S3 ou equivalente) | Arquivos de tarefas e mensagens |
 | Autenticação | JWT + bcrypt | Login por e-mail/senha |
-| Hospedagem | Nuvem com deploy por GitHub (Render/Railway/Fly/Vercel) | Atende à replicação automática |
+| Hospedagem | **Render** (assinatura existente) com deploy automático via GitHub | Atende à replicação automática |
 | CI/CD | GitHub Actions | Build, testes e publicação automáticos |
 
 > ❓ Existe stack ou provedor já usados pela empresa? Se não, seguimos com o acima.
@@ -202,16 +202,15 @@ Valores aproximados extraídos da logo (refinaremos com o material oficial da ma
 | 2 | Etapas do fluxo | ✅ **Livres por tarefa** — algumas tarefas terão fluxos maiores/personalizados. |
 | 3 | Subtarefa sequencial | ✅ **Sim** — a subtarefa só pode iniciar após a anterior ser concluída. |
 | 4 | Acesso do Cliente | ✅ **Somente interno** — cliente é referência; não há login externo. |
-| 5 | Hospedagem | ✅ **GitHub gratuito** durante a construção; migração para ambiente definitivo depois. |
+| 5 | Hospedagem | ✅ Código no **GitHub**; app publicado no **Render** (assinatura já existente), com deploy automático a partir do GitHub. |
 | 6 | Identidade visual | ✅ **Paleta azul da Azul Administradora** (tons apresentados na seção 8). |
 | 7 | Volume estimado | ✅ **~60 usuários** e **~5.000 tarefas/mês**. |
 | 8 | Integrações | ✅ E-mail **Locaweb**, WhatsApp **Z-API**, ERP **Superlógica** (ver seção 7.1). |
-| 9 | Idioma e fuso | ❓ **Pendente** — *sugestão:* Português (pt-BR) e fuso América/São_Paulo. |
+| 9 | Idioma e fuso | ✅ **Português (pt-BR)** e fuso **América/São_Paulo**. |
 
-> **Observação sobre o item 5:** "GitHub gratuito" cobre o **versionamento/repositório**.
-> Para o app ficar **acessível online** durante a construção, usaremos um serviço de
-> hospedagem com plano gratuito que publica direto do GitHub (ex.: Render/Railway/Fly).
-> A migração para o ambiente definitivo será feita depois, conforme combinado.
+> **Hospedagem (item 5):** o **GitHub** guarda o código/versionamento e o **Render**
+> (assinatura já contratada pelo cliente) hospeda o app online, fazendo **deploy
+> automático** a cada alteração aprovada — atendendo ao requisito de replicação automática.
 
 ---
 
