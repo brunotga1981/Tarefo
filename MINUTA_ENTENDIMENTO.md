@@ -4,7 +4,7 @@
 **Produto:** Tarefo — Plataforma de Gestão de Tarefas e Comunicação Interna
 **Documento:** Minuta de Entendimento (v2) — para avaliação e aprovação antes da construção
 **Data:** 25/06/2026
-**Status:** 🟡 Aguardando validação do solicitante
+**Status:** 🟢 Decisões 1–8 validadas — pendente apenas item 9 (idioma/fuso) e detalhes das integrações
 
 > **Para que serve este documento:** registrar, de forma clara, *o que entendemos* que
 > deve ser construído, *como* pretendemos construir e *em que ordem*. Ele é a base de
@@ -74,13 +74,14 @@ cliente), tendo o **Cliente** como elo que conecta tarefas e conversas em um "pr
 - Subtarefas (dependentes/sequenciais)
 - Projeto vinculado (sim/não + qual)
 
-**Campos adicionais recomendados** *(para os filtros e o Kanban funcionarem bem)* ❓:
+**Campos adicionais (confirmados)** *(necessários para filtros e Kanban)*:
 responsável atual, prazo/data de finalização prevista, status/etapa atual, tags.
 
 **Regras de negócio previstas:**
 - Todo comentário, mudança de etapa e de responsável fica registrado no **histórico** (auditoria).
 - Tarefa agendada gera novas tarefas conforme a regra, respeitando a janela início/fim.
-- Subtarefa sequencial só pode iniciar quando a anterior for concluída ❓ *(a confirmar).*
+- **Subtarefa sequencial só pode iniciar quando a anterior for concluída** (confirmado).
+- **Fluxos/etapas são livres por tarefa** (não há conjunto fixo) — confirmado.
 
 ### 4.2. "Meu Tarefo" (tela principal)
 
@@ -193,17 +194,24 @@ Valores aproximados extraídos da logo (refinaremos com o material oficial da ma
 
 ---
 
-## 10. Pontos em Aberto (precisam da sua decisão) ❓
+## 10. Decisões do Solicitante (validadas)
 
-1. Incluir os campos adicionais nas tarefas (responsável, prazo de finalização, status/etapa, tags)? *(recomendado: sim)*
-2. Etapas do fluxo: livres por tarefa ou um conjunto fixo padrão (ex.: A Fazer → Em Andamento → Em Revisão → Concluída)?
-3. Subtarefa sequencial bloqueia o início até a anterior concluir?
-4. Cliente tem acesso/login externo ou é apenas referência interna? *(entendimento: só interna)*
-5. Preferência de stack/provedor de nuvem e orçamento?
-6. Envio do manual de marca e da logo oficial em alta resolução.
-7. Volume estimado de usuários e tarefas/mês (dimensionamento).
-8. ✅ **Integrações definidas** (ver seção 7.1): e-mail Locaweb, WhatsApp via Z-API e ERP Superlógica.
-9. Idioma (apenas Português?) e fuso horário padrão.
+| # | Tema | Decisão |
+|---|------|---------|
+| 1 | Campos adicionais nas tarefas | ✅ **Sim** — incluir responsável, prazo de finalização, status/etapa e tags. |
+| 2 | Etapas do fluxo | ✅ **Livres por tarefa** — algumas tarefas terão fluxos maiores/personalizados. |
+| 3 | Subtarefa sequencial | ✅ **Sim** — a subtarefa só pode iniciar após a anterior ser concluída. |
+| 4 | Acesso do Cliente | ✅ **Somente interno** — cliente é referência; não há login externo. |
+| 5 | Hospedagem | ✅ **GitHub gratuito** durante a construção; migração para ambiente definitivo depois. |
+| 6 | Identidade visual | ✅ **Paleta azul da Azul Administradora** (tons apresentados na seção 8). |
+| 7 | Volume estimado | ✅ **~60 usuários** e **~5.000 tarefas/mês**. |
+| 8 | Integrações | ✅ E-mail **Locaweb**, WhatsApp **Z-API**, ERP **Superlógica** (ver seção 7.1). |
+| 9 | Idioma e fuso | ❓ **Pendente** — *sugestão:* Português (pt-BR) e fuso América/São_Paulo. |
+
+> **Observação sobre o item 5:** "GitHub gratuito" cobre o **versionamento/repositório**.
+> Para o app ficar **acessível online** durante a construção, usaremos um serviço de
+> hospedagem com plano gratuito que publica direto do GitHub (ex.: Render/Railway/Fly).
+> A migração para o ambiente definitivo será feita depois, conforme combinado.
 
 ---
 
