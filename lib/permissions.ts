@@ -2,6 +2,11 @@
 export const PERMISSIONS = [
   { key: "tasks.view", label: "Ver tarefas", group: "Tarefas" },
   { key: "tasks.manage", label: "Criar e editar tarefas", group: "Tarefas" },
+  {
+    key: "tasks.view_all",
+    label: "Ver todas as tarefas (não só as suas)",
+    group: "Tarefas",
+  },
   { key: "clients.view", label: "Ver clientes", group: "Clientes" },
   { key: "clients.manage", label: "Gerenciar clientes", group: "Clientes" },
   { key: "projects.view", label: "Ver projetos", group: "Projetos" },

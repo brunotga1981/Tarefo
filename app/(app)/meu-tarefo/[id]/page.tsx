@@ -1,12 +1,16 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { getCurrentUser, can } from "@/lib/auth";
 import {
   getTask,
   getSubtasks,
   getComments,
   getAttachments,
+  getCollaborators,
+  listUsersBasic,
+  canViewTask,
 } from "@/lib/data";
 import { TYPE_LABELS, TYPE_BADGE, STATUS_LABELS } from "@/lib/constants";
 import { formatDate, formatDateTime, isOverdue } from "@/lib/format";
@@ -16,22 +20,52 @@ import {
   addCommentAction,
   createTaskAction,
   uploadAttachmentAction,
+  addCollaboratorAction,
+  removeCollaboratorAction,
+  resolveMentionAction,
 } from "../actions";
+
+// Destaca @menções no texto do comentário.
+function renderBody(body: string) {
+  const parts = body.split(/(@[a-z0-9_.-]+)/gi);
+  return parts.map((p, i) =>
+    /^@[a-z0-9_.-]+$/i.test(p) ? (
+      <span key={i} className="font-semibold text-azul">
+        {p}
+      </span>
+    ) : (
+      <span key={i}>{p}</span>
+    )
+  );
+}
 
 export default async function TaskDetailPage({
   params,
 }: {
   params: { id: string };
 }) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const canViewAll = can(user, "tasks.view_all");
+
+  if (!(await canViewTask(params.id, user.id, canViewAll))) notFound();
+
   const task = await getTask(params.id);
   if (!task) notFound();
 
-  const [subtasks, comments, attachments] = await Promise.all([
-    getSubtasks(task.id),
-    getComments(task.id),
-    getAttachments(task.id),
-  ]);
+  const [subtasks, comments, attachments, collaborators, users] =
+    await Promise.all([
+      getSubtasks(task.id),
+      getComments(task.id, user.id),
+      getAttachments(task.id),
+      getCollaborators(task.id),
+      listUsersBasic(),
+    ]);
 
+  const collabIds = new Set(collaborators.map((c) => c.id));
+  const addable = users.filter(
+    (u) => !collabIds.has(u.id) && u.id !== task.owner_id
+  );
   const overdue = isOverdue(task.due_date, task.status);
 
   return (
@@ -107,6 +141,61 @@ export default async function TaskDetailPage({
           </div>
         )}
       </div>
+
+      {/* Colaboradores */}
+      <section className="mb-6 rounded-xl border border-slate-200 bg-white p-5">
+        <h2 className="mb-3 text-sm font-semibold text-azul-navy">
+          🤝 Colaboradores de tarefas
+        </h2>
+        <div className="flex flex-wrap items-center gap-2">
+          {collaborators.length === 0 && (
+            <p className="text-xs text-slate-400">
+              Nenhum colaborador. Adicione usuários para colaborar nesta tarefa.
+            </p>
+          )}
+          {collaborators.map((c) => (
+            <span
+              key={c.id}
+              className="flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700"
+            >
+              {c.name}
+              <form action={removeCollaboratorAction} className="inline">
+                <input type="hidden" name="task_id" value={task.id} />
+                <input type="hidden" name="user_id" value={c.id} />
+                <button className="ml-1 text-emerald-500 hover:text-red-500">
+                  ✕
+                </button>
+              </form>
+            </span>
+          ))}
+        </div>
+
+        {addable.length > 0 && (
+          <form
+            action={addCollaboratorAction}
+            className="mt-3 flex max-w-sm gap-2"
+          >
+            <input type="hidden" name="task_id" value={task.id} />
+            <select
+              name="user_id"
+              defaultValue=""
+              className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-azul"
+            >
+              <option value="" disabled>
+                Adicionar colaborador…
+              </option>
+              {addable.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
+            </select>
+            <button className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">
+              Adicionar
+            </button>
+          </form>
+        )}
+      </section>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Subtarefas */}
@@ -204,9 +293,14 @@ export default async function TaskDetailPage({
 
       {/* Comentários / evolução */}
       <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5">
-        <h2 className="mb-3 text-sm font-semibold text-azul-navy">
+        <h2 className="mb-1 text-sm font-semibold text-azul-navy">
           💬 Comentários de evolução
         </h2>
+        <p className="mb-3 text-xs text-slate-400">
+          Use <span className="font-semibold text-azul">@usuario</span> para
+          marcar alguém — a tarefa aparecerá na coluna “Marcação de Tarefa - MD”
+          dessa pessoa.
+        </p>
 
         <ResetForm action={addCommentAction} className="mb-5 space-y-2">
           <input type="hidden" name="task_id" value={task.id} />
@@ -214,7 +308,7 @@ export default async function TaskDetailPage({
             name="body"
             required
             rows={2}
-            placeholder="Registrar evolução…"
+            placeholder="Registrar evolução… (ex.: @atendimento favor verificar)"
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-azul"
           />
           <div className="flex justify-end">
@@ -231,7 +325,11 @@ export default async function TaskDetailPage({
           {comments.map((c) => (
             <div
               key={c.id}
-              className="rounded-lg border border-slate-100 bg-slate-50 p-3"
+              className={`rounded-lg border p-3 ${
+                c.mentions_me_pending
+                  ? "border-azul-claro bg-azul-suave/20"
+                  : "border-slate-100 bg-slate-50"
+              }`}
             >
               <div className="mb-1 flex items-center justify-between">
                 <span className="text-xs font-semibold text-azul-navy">
@@ -242,8 +340,17 @@ export default async function TaskDetailPage({
                 </span>
               </div>
               <p className="whitespace-pre-wrap text-sm text-slate-700">
-                {c.body}
+                {renderBody(c.body)}
               </p>
+              {c.mentions_me_pending && (
+                <form action={resolveMentionAction} className="mt-2">
+                  <input type="hidden" name="comment_id" value={c.id} />
+                  <input type="hidden" name="task_id" value={task.id} />
+                  <button className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-700">
+                    ✓ Check — baixar marcação
+                  </button>
+                </form>
+              )}
             </div>
           ))}
         </div>

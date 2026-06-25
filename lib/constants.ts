@@ -15,12 +15,8 @@ export const TYPE_BADGE: Record<string, string> = {
   PRIORIDADE_MAXIMA: "bg-red-100 text-red-700",
 };
 
-export const TASK_STATUSES = [
-  "A_FAZER",
-  "EM_ANDAMENTO",
-  "EM_REVISAO",
-  "CONCLUIDA",
-] as const;
+// Status de fluxo (a antiga "Em Revisão" virou a coluna especial "Marcação de Tarefa - MD").
+export const TASK_STATUSES = ["A_FAZER", "EM_ANDAMENTO", "CONCLUIDA"] as const;
 export type TaskStatus = (typeof TASK_STATUSES)[number];
 
 export const STATUS_LABELS: Record<string, string> = {

@@ -1,13 +1,10 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { listTopTasks, type TaskRow } from "@/lib/data";
-import {
-  STATUS_LABELS,
-  TASK_STATUSES,
-  TYPE_LABELS,
-  TYPE_BADGE,
-} from "@/lib/constants";
+import { redirect } from "next/navigation";
+import { getCurrentUser, can } from "@/lib/auth";
+import { listVisibleTasks, type TaskRow } from "@/lib/data";
+import { STATUS_LABELS, TYPE_LABELS, TYPE_BADGE } from "@/lib/constants";
 import { formatDate, isOverdue } from "@/lib/format";
 import { StatusSelect } from "@/components/tarefo/StatusSelect";
 
@@ -19,14 +16,30 @@ const SORTS = [
   { key: "recent", label: "Mais recentes" },
 ];
 
+const COLUMNS = [
+  { key: "A_FAZER", label: "A Fazer", kind: "status" as const },
+  { key: "EM_ANDAMENTO", label: "Em Andamento", kind: "status" as const },
+  { key: "MD", label: "Marcação de Tarefa - MD", kind: "mentions" as const },
+  { key: "CONCLUIDA", label: "Concluída", kind: "status" as const },
+];
+
+function bucketOf(t: TaskRow): string {
+  if ((t.pending_mentions ?? 0) > 0) return "MD";
+  return t.status;
+}
+
 export default async function MeuTarefoPage({
   searchParams,
 }: {
   searchParams: { view?: string; sort?: string };
 }) {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  const canViewAll = can(user, "tasks.view_all");
+
   const view = searchParams.view === "lista" ? "lista" : "kanban";
   const sort = searchParams.sort ?? "priority";
-  const tasks = await listTopTasks(sort);
+  const tasks = await listVisibleTasks(user.id, canViewAll, sort);
 
   return (
     <div>
@@ -34,8 +47,8 @@ export default async function MeuTarefoPage({
         <div>
           <h1 className="text-2xl font-bold text-azul-navy">Meu Tarefo</h1>
           <p className="text-sm text-slate-500">
-            {tasks.length} tarefa{tasks.length === 1 ? "" : "s"} ·
-            {" "}suas tarefas em um só lugar.
+            {tasks.length} tarefa{tasks.length === 1 ? "" : "s"}
+            {canViewAll ? " · visão de todas as tarefas" : " · suas tarefas"}
           </p>
         </div>
 
@@ -89,6 +102,18 @@ export default async function MeuTarefoPage({
         ))}
       </div>
 
+      {/* Legenda */}
+      <div className="mb-4 flex flex-wrap gap-4 text-xs text-slate-400">
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-3 w-3 rounded border-l-4 border-emerald-500 bg-emerald-50" />
+          Você é colaborador
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-3 w-3 rounded bg-azul-suave" />
+          Marcação de Tarefa (MD): você foi @mencionado
+        </span>
+      </div>
+
       {view === "kanban" ? (
         <KanbanView tasks={tasks} />
       ) : (
@@ -101,16 +126,21 @@ export default async function MeuTarefoPage({
 function KanbanView({ tasks }: { tasks: TaskRow[] }) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {TASK_STATUSES.map((status) => {
-        const items = tasks.filter((t) => t.status === status);
+      {COLUMNS.map((col) => {
+        const items = tasks.filter((t) => bucketOf(t) === col.key);
+        const isMD = col.kind === "mentions";
         return (
           <div
-            key={status}
-            className="rounded-xl border border-slate-200 bg-white/60 p-3"
+            key={col.key}
+            className={`rounded-xl border p-3 ${
+              isMD
+                ? "border-azul-claro bg-azul-suave/20"
+                : "border-slate-200 bg-white/60"
+            }`}
           >
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-azul-navy">
-                {STATUS_LABELS[status]}
+                {col.label}
               </h2>
               <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-400">
                 {items.length}
@@ -119,11 +149,11 @@ function KanbanView({ tasks }: { tasks: TaskRow[] }) {
             <div className="space-y-2">
               {items.length === 0 && (
                 <div className="flex h-20 items-center justify-center rounded-lg border-2 border-dashed border-slate-200 text-xs text-slate-400">
-                  Sem tarefas
+                  {isMD ? "Sem marcações" : "Sem tarefas"}
                 </div>
               )}
               {items.map((t) => (
-                <KanbanCard key={t.id} task={t} />
+                <KanbanCard key={t.id} task={t} showMention={isMD} />
               ))}
             </div>
           </div>
@@ -133,16 +163,39 @@ function KanbanView({ tasks }: { tasks: TaskRow[] }) {
   );
 }
 
-function KanbanCard({ task }: { task: TaskRow }) {
+function KanbanCard({
+  task,
+  showMention,
+}: {
+  task: TaskRow;
+  showMention?: boolean;
+}) {
   const overdue = isOverdue(task.due_date, task.status);
+  const collab = task.is_collaborator;
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition hover:shadow">
+    <div
+      className={`rounded-lg border bg-white p-3 shadow-sm transition hover:shadow ${
+        collab ? "border-l-4 border-l-emerald-500 border-slate-200" : "border-slate-200"
+      }`}
+    >
       <Link href={`/meu-tarefo/${task.id}`} className="block">
-        <span
-          className={`mb-2 inline-block rounded px-1.5 py-0.5 text-[10px] font-semibold ${TYPE_BADGE[task.type]}`}
-        >
-          {TYPE_LABELS[task.type]}
-        </span>
+        <div className="mb-2 flex flex-wrap items-center gap-1">
+          <span
+            className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-semibold ${TYPE_BADGE[task.type]}`}
+          >
+            {TYPE_LABELS[task.type]}
+          </span>
+          {collab && (
+            <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
+              Colaborador
+            </span>
+          )}
+          {showMention && (
+            <span className="rounded bg-azul px-1.5 py-0.5 text-[10px] font-semibold text-white">
+              @você
+            </span>
+          )}
+        </div>
         <p className="text-sm font-medium text-slate-800">{task.name}</p>
         <div className="mt-2 space-y-0.5 text-[11px] text-slate-400">
           {task.client_name && <p>🏢 {task.client_name}</p>}
@@ -154,9 +207,19 @@ function KanbanCard({ task }: { task: TaskRow }) {
           {!!task.subtask_count && <p>🧩 {task.subtask_count} subtarefa(s)</p>}
         </div>
       </Link>
-      <div className="mt-2">
-        <StatusSelect id={task.id} status={task.status} />
-      </div>
+      {!showMention && (
+        <div className="mt-2">
+          <StatusSelect id={task.id} status={task.status} />
+        </div>
+      )}
+      {showMention && (
+        <Link
+          href={`/meu-tarefo/${task.id}`}
+          className="mt-2 block rounded-md bg-azul-navy py-1 text-center text-[11px] font-semibold text-white hover:bg-azul"
+        >
+          Verificar marcação →
+        </Link>
+      )}
     </div>
   );
 }
@@ -179,7 +242,7 @@ function ListView({ tasks }: { tasks: TaskRow[] }) {
           {tasks.length === 0 && (
             <tr>
               <td colSpan={6} className="px-4 py-12 text-center text-slate-400">
-                Nenhuma tarefa cadastrada ainda. Clique em “+ Nova tarefa”.
+                Nenhuma tarefa visível para você. Clique em “+ Nova tarefa”.
               </td>
             </tr>
           )}
@@ -188,7 +251,9 @@ function ListView({ tasks }: { tasks: TaskRow[] }) {
             return (
               <tr
                 key={t.id}
-                className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                className={`border-b border-slate-100 last:border-0 hover:bg-slate-50 ${
+                  t.is_collaborator ? "border-l-4 border-l-emerald-500" : ""
+                }`}
               >
                 <td className="px-4 py-3">
                   <Link
@@ -197,6 +262,16 @@ function ListView({ tasks }: { tasks: TaskRow[] }) {
                   >
                     {t.name}
                   </Link>
+                  {t.is_collaborator && (
+                    <span className="ml-2 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
+                      Colaborador
+                    </span>
+                  )}
+                  {!!t.pending_mentions && (
+                    <span className="ml-1 rounded bg-azul px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                      MD
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   <span

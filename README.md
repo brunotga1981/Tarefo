@@ -11,6 +11,17 @@ sessão por cookie assinado, **perfis de acesso** com permissões cadastráveis,
 **grupos de acesso** (membros + perfis concedidos) e cadastros de **Clientes** e
 **Projetos**. O menu e as páginas respeitam as permissões do usuário.
 
+Regras de tarefa adicionais:
+
+- **Visibilidade:** cada usuário vê apenas as tarefas das quais é dono, colaborador ou
+  onde foi mencionado. O perfil com a permissão *"Ver todas as tarefas"* (Administrador)
+  enxerga todas.
+- **Colaboradores de tarefas:** é possível adicionar outros usuários como colaboradores;
+  a tarefa passa a aparecer no Meu Tarefo deles destacada em **verde**.
+- **Marcação de Tarefa - MD:** ao escrever **@usuario** num comentário, a tarefa entra na
+  coluna "Marcação de Tarefa - MD" da pessoa marcada. No comentário há um botão **Check**
+  para baixar (resolver) a marcação.
+
 Fase 1 — Núcleo de Tarefas: cadastro completo de tarefas com persistência em
 PostgreSQL, visões **Kanban** e **Lista** com ordenação, página de detalhe com
 **comentários de evolução** (data/hora), **subtarefas** (com regra de dependência

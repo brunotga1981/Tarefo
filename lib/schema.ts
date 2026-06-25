@@ -91,4 +91,28 @@ CREATE TABLE IF NOT EXISTS group_profiles (
 -- Campos de autenticação/perfil no usuário (idempotente)
 ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash text;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_id text REFERENCES profiles(id);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS username text;
+
+-- Dono da tarefa (criador) para a regra de visibilidade
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS owner_id text REFERENCES users(id);
+
+-- Colaboradores da tarefa
+CREATE TABLE IF NOT EXISTS task_collaborators (
+  task_id text NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  PRIMARY KEY (task_id, user_id)
+);
+
+-- Menções (@usuario) feitas nos comentários
+CREATE TABLE IF NOT EXISTS mentions (
+  id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  task_id text NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  comment_id text NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
+  user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  resolved boolean NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- A coluna "Em Revisão" foi substituída por "Marcação de Tarefa - MD".
+UPDATE tasks SET status = 'EM_ANDAMENTO' WHERE status = 'EM_REVISAO';
 `;
