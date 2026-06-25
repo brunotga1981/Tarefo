@@ -185,6 +185,11 @@ function KanbanCard({
           >
             {TYPE_LABELS[task.type]}
           </span>
+          {task.parent_name && (
+            <span className="inline-flex items-center gap-0.5 rounded bg-azul-suave/50 px-1.5 py-0.5 text-[10px] font-semibold text-azul-navy">
+              🧩 Subtarefa
+            </span>
+          )}
           {collab && (
             <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
               Colaborador
