@@ -6,10 +6,25 @@ Sistema de **gestão de tarefas e comunicação interna** da **Azul Administrado
 
 ## Status
 
-**Fase 1 — Núcleo de Tarefas** (concluída): cadastro completo de tarefas com persistência
-em PostgreSQL, visões **Kanban** e **Lista** com ordenação, página de detalhe com
+**Fase 2 — Usuários e Permissões** (concluída): login real (e-mail/senha com hash),
+sessão por cookie assinado, **perfis de acesso** com permissões cadastráveis,
+**grupos de acesso** (membros + perfis concedidos) e cadastros de **Clientes** e
+**Projetos**. O menu e as páginas respeitam as permissões do usuário.
+
+Fase 1 — Núcleo de Tarefas: cadastro completo de tarefas com persistência em
+PostgreSQL, visões **Kanban** e **Lista** com ordenação, página de detalhe com
 **comentários de evolução** (data/hora), **subtarefas** (com regra de dependência
 sequencial) e **anexos**.
+
+### Acesso de demonstração
+
+Usuários de exemplo (senha **`tarefo123`**):
+
+| E-mail | Perfil |
+|--------|--------|
+| admin@azuladministradora.com.br | Administrador (tudo) |
+| brunotga@yahoo.com.br | Gestor |
+| atendimento@azuladministradora.com.br | Membro |
 
 ## Stack
 
@@ -55,8 +70,8 @@ aponte para este repositório e o deploy passa a ser automático a cada push.
 Ver seção 9 da [minuta](./MINUTA_ENTENDIMENTO.md). Resumo:
 
 0. **Setup** — estrutura, CI/CD, paleta, tela inicial ✅
-1. **Núcleo de Tarefas** — cadastro completo + Kanban/Lista ✅ (atual)
-2. **Usuários e Permissões** — login, perfis, grupos, clientes, projetos
+1. **Núcleo de Tarefas** — cadastro completo + Kanban/Lista ✅
+2. **Usuários e Permissões** — login, perfis, grupos, clientes, projetos ✅ (atual)
 3. **Modelos e Agendamentos** — templates, lotes e recorrências
 4. **Comunicação Interna** — chat 1‑1, grupos e canais por cliente
 5. **Refinos** — notificações, relatórios, UX

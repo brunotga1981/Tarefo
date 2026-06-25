@@ -1,5 +1,7 @@
 import { Pool } from "pg";
 import { SCHEMA_SQL } from "./schema";
+import { hashPassword } from "./hash";
+import { ALL_PERMISSION_KEYS } from "./permissions";
 
 // Pool de conexões reutilizável entre hot-reloads do Next em desenvolvimento.
 const globalForDb = globalThis as unknown as {
@@ -35,25 +37,94 @@ export function ready(): Promise<void> {
   if (!globalForDb._ready) {
     globalForDb._ready = (async () => {
       await pool.query(SCHEMA_SQL);
-      await seedIfEmpty();
+      await seedAccess();
+      await seedTasks();
     })();
   }
   return globalForDb._ready;
 }
 
-async function seedIfEmpty() {
+// Perfis de acesso, usuários (com senha) e grupos.
+async function seedAccess() {
+  const { rows } = await pool.query<{ count: string }>(
+    "SELECT count(*)::int AS count FROM profiles"
+  );
+  if (Number(rows[0]?.count ?? 0) > 0) return;
+
+  // Perfis
+  const admin = await pool.query<{ id: string }>(
+    `INSERT INTO profiles (name) VALUES ('Administrador') RETURNING id`
+  );
+  const gestor = await pool.query<{ id: string }>(
+    `INSERT INTO profiles (name) VALUES ('Gestor') RETURNING id`
+  );
+  const membro = await pool.query<{ id: string }>(
+    `INSERT INTO profiles (name) VALUES ('Membro') RETURNING id`
+  );
+  const adminId = admin.rows[0].id;
+  const gestorId = gestor.rows[0].id;
+  const membroId = membro.rows[0].id;
+
+  // Permissões por perfil
+  for (const key of ALL_PERMISSION_KEYS) {
+    await pool.query(
+      `INSERT INTO profile_permissions (profile_id, permission) VALUES ($1,$2)`,
+      [adminId, key]
+    );
+  }
+  for (const key of [
+    "tasks.view",
+    "tasks.manage",
+    "clients.view",
+    "clients.manage",
+    "projects.view",
+    "projects.manage",
+    "users.manage",
+  ]) {
+    await pool.query(
+      `INSERT INTO profile_permissions (profile_id, permission) VALUES ($1,$2)`,
+      [gestorId, key]
+    );
+  }
+  for (const key of ["tasks.view", "tasks.manage", "clients.view", "projects.view"]) {
+    await pool.query(
+      `INSERT INTO profile_permissions (profile_id, permission) VALUES ($1,$2)`,
+      [membroId, key]
+    );
+  }
+
+  // Usuários (senha padrão de demonstração)
+  const pwd = hashPassword("tarefo123");
+  await pool.query(
+    `INSERT INTO users (name, email, role, password_hash, profile_id) VALUES
+      ('Administrador', 'admin@azuladministradora.com.br', 'Administrador', $1, $2),
+      ('Bruno Tarefo', 'brunotga@yahoo.com.br', 'Gestor', $1, $3),
+      ('Equipe Atendimento', 'atendimento@azuladministradora.com.br', 'Membro', $1, $4)`,
+    [pwd, adminId, gestorId, membroId]
+  );
+
+  // Grupo de exemplo
+  const grupo = await pool.query<{ id: string }>(
+    `INSERT INTO groups (name) VALUES ('Atendimento') RETURNING id`
+  );
+  const grupoId = grupo.rows[0].id;
+  await pool.query(
+    `INSERT INTO group_profiles (group_id, profile_id) VALUES ($1,$2)`,
+    [grupoId, membroId]
+  );
+  await pool.query(
+    `INSERT INTO group_members (group_id, user_id)
+     SELECT $1, id FROM users WHERE email = 'atendimento@azuladministradora.com.br'`,
+    [grupoId]
+  );
+}
+
+// Clientes, projetos e tarefas de exemplo.
+async function seedTasks() {
   const { rows } = await pool.query<{ count: string }>(
     "SELECT count(*)::int AS count FROM clients"
   );
   if (Number(rows[0]?.count ?? 0) > 0) return;
-
-  // Usuários de exemplo
-  await pool.query(
-    `INSERT INTO users (name, email, role) VALUES
-      ('Administrador', 'admin@azuladministradora.com.br', 'Administrador'),
-      ('Bruno Tarefo', 'brunotga@yahoo.com.br', 'Gestor'),
-      ('Equipe Atendimento', 'atendimento@azuladministradora.com.br', 'Membro')`
-  );
 
   // Clientes de exemplo
   const clients = await pool.query<{ id: string }>(

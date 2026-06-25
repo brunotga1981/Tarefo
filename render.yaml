@@ -19,6 +19,9 @@ services:
         fromDatabase:
           name: tarefo-db
           property: connectionString
+      # Segredo de assinatura da sessão (gerado automaticamente pelo Render).
+      - key: SESSION_SECRET
+        generateValue: true
 
 databases:
   - name: tarefo-db

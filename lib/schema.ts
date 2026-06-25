@@ -56,4 +56,39 @@ CREATE TABLE IF NOT EXISTS attachments (
   task_id text NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
   created_at timestamptz NOT NULL DEFAULT now()
 );
+
+-- Fase 2: perfis de acesso, grupos e autenticação
+CREATE TABLE IF NOT EXISTS profiles (
+  id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  name text UNIQUE NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS profile_permissions (
+  profile_id text NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  permission text NOT NULL,
+  PRIMARY KEY (profile_id, permission)
+);
+
+CREATE TABLE IF NOT EXISTS groups (
+  id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  name text UNIQUE NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS group_members (
+  group_id text NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  PRIMARY KEY (group_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS group_profiles (
+  group_id text NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  profile_id text NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  PRIMARY KEY (group_id, profile_id)
+);
+
+-- Campos de autenticação/perfil no usuário (idempotente)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_id text REFERENCES profiles(id);
 `;
