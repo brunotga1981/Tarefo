@@ -1,0 +1,28 @@
+# Blueprint de deploy do Tarefo no Render.
+# Conecte este repositório no Render (New > Blueprint) para deploy automático
+# a cada push na branch de produção.
+services:
+  - type: web
+    name: tarefo
+    runtime: node
+    plan: free
+    region: oregon
+    branch: main
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: TZ
+        value: America/Sao_Paulo
+      # Banco de dados (Fase 2). Crie um Postgres no Render e ligue aqui:
+      # - key: DATABASE_URL
+      #   fromDatabase:
+      #     name: tarefo-db
+      #     property: connectionString
+
+# Banco PostgreSQL (descomente quando iniciar a Fase 2):
+# databases:
+#   - name: tarefo-db
+#     plan: free
+#     region: oregon
