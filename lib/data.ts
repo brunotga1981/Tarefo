@@ -20,6 +20,7 @@ export type TaskRow = {
   client_name?: string | null;
   project_name?: string | null;
   owner_name?: string | null;
+  parent_name?: string | null;
   depth?: number;
   subtask_count?: number;
   is_collaborator?: boolean;
@@ -47,7 +48,7 @@ const TASK_SELECT = `
 const TYPE_RANK =
   "CASE t.type WHEN 'PRIORIDADE_MAXIMA' THEN 0 WHEN 'URGENTE' THEN 1 ELSE 2 END";
 
-// Tarefas de topo visíveis para o usuário (dono, colaborador, mencionado ou admin).
+// Cartões do "Meu Tarefo": tarefas de topo visíveis + subtarefas atribuídas/relacionadas ao usuário.
 export async function listVisibleTasks(
   userId: string,
   canViewAll: boolean,
@@ -59,14 +60,21 @@ export async function listVisibleTasks(
   else if (sort === "responsavel") order = "ORDER BY t.responsavel NULLS LAST";
   else if (sort === "recent") order = "ORDER BY t.created_at DESC";
 
-  const visibility = canViewAll
-    ? "TRUE"
-    : `(t.owner_id = $1
-        OR EXISTS (SELECT 1 FROM task_collaborators tc WHERE tc.task_id = t.id AND tc.user_id = $1)
-        OR EXISTS (SELECT 1 FROM mentions m WHERE m.task_id = t.id AND m.user_id = $1))`;
+  // Vínculo direto do usuário com a tarefa (dono, colaborador ou mencionado).
+  const directStake = `(t.owner_id = $1
+      OR EXISTS (SELECT 1 FROM task_collaborators tc WHERE tc.task_id = t.id AND tc.user_id = $1)
+      OR EXISTS (SELECT 1 FROM mentions m WHERE m.task_id = t.id AND m.user_id = $1))`;
+
+  // Topo: regra de visibilidade normal (admin vê todas). Subtarefa: só se houver vínculo direto.
+  const where = `(
+      (t.parent_id IS NULL AND (${canViewAll ? "TRUE" : directStake}))
+      OR
+      (t.parent_id IS NOT NULL AND ${directStake})
+    )`;
 
   return query<TaskRow>(
     `SELECT t.*, c.name AS client_name, p.name AS project_name,
+       pt.name AS parent_name,
        (SELECT count(*)::int FROM tasks s WHERE s.parent_id = t.id) AS subtask_count,
        EXISTS (SELECT 1 FROM task_collaborators tc WHERE tc.task_id = t.id AND tc.user_id = $1) AS is_collaborator,
        (SELECT count(*)::int FROM mentions m WHERE m.task_id = t.id AND m.user_id = $1 AND m.resolved = false) AS pending_mentions,
@@ -76,7 +84,8 @@ export async function listVisibleTasks(
      FROM tasks t
      LEFT JOIN clients c ON c.id = t.client_id
      LEFT JOIN projects p ON p.id = t.project_id
-     WHERE t.parent_id IS NULL AND ${visibility}
+     LEFT JOIN tasks pt ON pt.id = t.parent_id
+     WHERE ${where}
      ${order}`,
     [userId]
   );

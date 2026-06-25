@@ -197,6 +197,11 @@ function KanbanCard({
           )}
         </div>
         <p className="text-sm font-medium text-slate-800">{task.name}</p>
+        {task.parent_name && (
+          <p className="mt-0.5 text-[10px] text-azul">
+            🧩 Subtarefa de: {task.parent_name}
+          </p>
+        )}
         <div className="mt-2 space-y-0.5 text-[11px] text-slate-400">
           {task.client_name && <p>🏢 {task.client_name}</p>}
           {task.responsavel && <p>👤 {task.responsavel}</p>}
@@ -268,6 +273,11 @@ function ListView({ tasks }: { tasks: TaskRow[] }) {
                   >
                     {t.name}
                   </Link>
+                  {t.parent_name && (
+                    <span className="ml-2 text-[10px] text-azul">
+                      🧩 sub de: {t.parent_name}
+                    </span>
+                  )}
                   {t.is_collaborator && (
                     <span className="ml-2 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
                       Colaborador

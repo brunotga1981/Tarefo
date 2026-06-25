@@ -28,7 +28,8 @@ Regras de tarefa adicionais:
   Quando todos finalizam a sua parte, a tarefa é concluída automaticamente.
 - **Hierarquia de subtarefas:** o **dono** da tarefa (quem a recebe) pode abrir subtarefas
   e atribuí-las a outros usuários. É permitido abrir subtarefa de subtarefa — até **2 níveis**
-  abaixo da tarefa principal (principal → subtarefa → sub-subtarefa).
+  abaixo da tarefa principal (principal → subtarefa → sub-subtarefa). A subtarefa atribuída
+  também aparece como **cartão próprio** no "Meu Tarefo" do responsável, indicando a tarefa-pai.
 
 Fase 1 — Núcleo de Tarefas: cadastro completo de tarefas com persistência em
 PostgreSQL, visões **Kanban** e **Lista** com ordenação, página de detalhe com
