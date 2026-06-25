@@ -77,7 +77,10 @@ export default async function TaskDetailPage({
   const progressPct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
   const me = participants.find((p) => p.id === user.id);
   const isParticipant = !!me;
+  const isOwner = task.owner_id === user.id;
   const concluded = task.status === "CONCLUIDA";
+  // Dono (ou admin) pode abrir subtarefas, até o 2º nível (sub-subtarefa).
+  const canManageSub = (isOwner || canViewAll) && (task.depth ?? 0) < 2;
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -123,7 +126,7 @@ export default async function TaskDetailPage({
                 <FinishTask
                   taskId={task.id}
                   canFinishMine={isParticipant}
-                  canFinishAll={isParticipant || canViewAll}
+                  canFinishAll={isOwner || canViewAll}
                   myDone={!!me?.done}
                 />
               </div>
@@ -266,6 +269,11 @@ export default async function TaskDetailPage({
         <section className="rounded-xl border border-slate-200 bg-white p-5">
           <h2 className="mb-3 text-sm font-semibold text-azul-navy">
             🧩 Subtarefas
+            {(task.depth ?? 0) === 1 && (
+              <span className="ml-2 text-[10px] font-normal text-slate-400">
+                (nível {(task.depth ?? 0) + 1})
+              </span>
+            )}
           </h2>
           <div className="space-y-2">
             {subtasks.length === 0 && (
@@ -286,6 +294,11 @@ export default async function TaskDetailPage({
                       (sequencial)
                     </span>
                   )}
+                  {s.owner_name && (
+                    <span className="ml-1 text-[10px] text-azul">
+                      → {s.owner_name}
+                    </span>
+                  )}
                 </Link>
                 <span className="text-[11px] text-slate-400">
                   {STATUS_LABELS[s.status]}
@@ -294,23 +307,42 @@ export default async function TaskDetailPage({
             ))}
           </div>
 
-          <ResetForm action={createTaskAction} className="mt-4 space-y-2">
-            <input type="hidden" name="parent_id" value={task.id} />
-            <input
-              name="name"
-              required
-              placeholder="Nova subtarefa…"
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-azul"
-            />
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-1.5 text-xs text-slate-500">
-                <input type="checkbox" name="sequential" /> Sequencial
-              </label>
-              <button className="rounded-lg bg-azul px-3 py-1.5 text-xs font-semibold text-white hover:bg-azul-navy">
-                Adicionar
-              </button>
-            </div>
-          </ResetForm>
+          {canManageSub ? (
+            <ResetForm action={createTaskAction} className="mt-4 space-y-2">
+              <input type="hidden" name="parent_id" value={task.id} />
+              <input
+                name="name"
+                required
+                placeholder="Nova subtarefa…"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-azul"
+              />
+              <select
+                name="owner_id"
+                defaultValue={user.id}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-azul"
+              >
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    Atribuir a: {u.name}
+                  </option>
+                ))}
+              </select>
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <input type="checkbox" name="sequential" /> Sequencial
+                </label>
+                <button className="rounded-lg bg-azul px-3 py-1.5 text-xs font-semibold text-white hover:bg-azul-navy">
+                  Adicionar
+                </button>
+              </div>
+            </ResetForm>
+          ) : (
+            <p className="mt-4 text-xs text-slate-400">
+              {(task.depth ?? 0) >= 2
+                ? "Limite de 2 níveis de subtarefa atingido."
+                : "Somente o dono da tarefa pode abrir subtarefas."}
+            </p>
+          )}
         </section>
 
         {/* Anexos */}

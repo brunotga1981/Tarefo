@@ -23,9 +23,12 @@ Regras de tarefa adicionais:
   para baixar (resolver) a marcação.
 - **Responsabilidade dividida:** a responsabilidade é dividida igualmente entre os
   participantes (dono + colaboradores). O botão **Finalizar Tarefa** oferece:
-  *(1) Finalizar apenas a sua Colaboração* — conclui a sua parte; ou
-  *(2) Finalizar 100% da Tarefa* — conclui tudo. Quando todos finalizam a sua parte,
-  a tarefa é concluída automaticamente.
+  *(1) Finalizar apenas a sua Colaboração* (qualquer participante) — conclui a sua parte; ou
+  *(2) Finalizar 100% da Tarefa* (**apenas o dono ou o Administrador**) — conclui tudo.
+  Quando todos finalizam a sua parte, a tarefa é concluída automaticamente.
+- **Hierarquia de subtarefas:** o **dono** da tarefa (quem a recebe) pode abrir subtarefas
+  e atribuí-las a outros usuários. É permitido abrir subtarefa de subtarefa — até **2 níveis**
+  abaixo da tarefa principal (principal → subtarefa → sub-subtarefa).
 
 Fase 1 — Núcleo de Tarefas: cadastro completo de tarefas com persistência em
 PostgreSQL, visões **Kanban** e **Lista** com ordenação, página de detalhe com

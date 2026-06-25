@@ -52,17 +52,24 @@ export function FinishTask({
             )
           )}
 
-          <form action={finalizeWholeAction}>
-            <input type="hidden" name="task_id" value={taskId} />
-            <button className="block w-full rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">
-              <span className="font-medium text-emerald-700">
-                2) Finalizar 100% da Tarefa
-              </span>
-              <span className="block text-xs text-slate-400">
-                Conclui a tarefa inteira para todos os participantes.
-              </span>
-            </button>
-          </form>
+          {canFinishAll && (
+            <form action={finalizeWholeAction}>
+              <input type="hidden" name="task_id" value={taskId} />
+              <button className="block w-full rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">
+                <span className="font-medium text-emerald-700">
+                  2) Finalizar 100% da Tarefa
+                </span>
+                <span className="block text-xs text-slate-400">
+                  Conclui a tarefa inteira para todos os participantes.
+                </span>
+              </button>
+            </form>
+          )}
+          {!canFinishAll && (
+            <p className="px-2 py-1 text-[11px] text-slate-400">
+              Apenas o dono da tarefa pode finalizar 100%.
+            </p>
+          )}
         </div>
       )}
     </div>

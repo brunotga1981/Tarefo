@@ -22,6 +22,35 @@ export async function createTaskAction(formData: FormData) {
 
   const parentId = nullable(formData.get("parent_id"));
 
+  // Dono da nova tarefa: na subtarefa pode ser atribuída a outra pessoa.
+  let ownerId = user.id;
+
+  if (parentId) {
+    const p = await query<{ owner_id: string | null; parent_id: string | null }>(
+      `SELECT owner_id, parent_id FROM tasks WHERE id = $1`,
+      [parentId]
+    );
+    const parent = p[0];
+    if (!parent) return;
+
+    // Apenas o dono da tarefa-pai (ou Administrador) pode abrir subtarefas.
+    if (parent.owner_id !== user.id && !can(user, "tasks.view_all")) return;
+
+    // Limite de profundidade: principal -> subtarefa -> sub-subtarefa (2 níveis).
+    let parentDepth = 0;
+    if (parent.parent_id) {
+      const gp = await query<{ parent_id: string | null }>(
+        `SELECT parent_id FROM tasks WHERE id = $1`,
+        [parent.parent_id]
+      );
+      parentDepth = gp[0]?.parent_id ? 2 : 1;
+    }
+    if (parentDepth >= 2) return; // criaria um 3º nível — não permitido
+
+    // Atribuição da subtarefa (responsável que "recebe" a subtarefa)
+    ownerId = nullable(formData.get("owner_id")) ?? user.id;
+  }
+
   const rows = await query<{ id: string }>(
     `INSERT INTO tasks
        (name, type, status, start_date, due_date, description, responsavel, tags,
@@ -42,7 +71,7 @@ export async function createTaskAction(formData: FormData) {
       nullable(formData.get("project_id")),
       parentId,
       formData.get("sequential") === "on",
-      user.id,
+      ownerId,
     ]
   );
 
@@ -199,11 +228,15 @@ export async function finalizeWholeAction(formData: FormData) {
   if (!user) return;
   const taskId = String(formData.get("task_id"));
 
-  const participants = await getParticipantIds(taskId);
-  const allowed =
-    participants.includes(user.id) || can(user, "tasks.view_all");
-  if (!allowed) return;
+  // Apenas o dono da tarefa ou o Administrador podem finalizar 100%.
+  const owner = await query<{ owner_id: string | null }>(
+    `SELECT owner_id FROM tasks WHERE id = $1`,
+    [taskId]
+  );
+  const isOwner = owner[0]?.owner_id === user.id;
+  if (!isOwner && !can(user, "tasks.view_all")) return;
 
+  const participants = await getParticipantIds(taskId);
   for (const uid of participants) {
     await query(
       `INSERT INTO task_completions (task_id, user_id) VALUES ($1,$2)

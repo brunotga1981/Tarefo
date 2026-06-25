@@ -19,6 +19,8 @@ export type TaskRow = {
   order: number;
   client_name?: string | null;
   project_name?: string | null;
+  owner_name?: string | null;
+  depth?: number;
   subtask_count?: number;
   is_collaborator?: boolean;
   pending_mentions?: number;
@@ -29,11 +31,17 @@ export type TaskRow = {
 export type Named = { id: string; name: string };
 
 const TASK_SELECT = `
-  SELECT t.*, c.name AS client_name, p.name AS project_name,
-    (SELECT count(*)::int FROM tasks s WHERE s.parent_id = t.id) AS subtask_count
+  SELECT t.*, c.name AS client_name, p.name AS project_name, ou.name AS owner_name,
+    (SELECT count(*)::int FROM tasks s WHERE s.parent_id = t.id) AS subtask_count,
+    (CASE
+       WHEN t.parent_id IS NULL THEN 0
+       WHEN (SELECT pp.parent_id FROM tasks pp WHERE pp.id = t.parent_id) IS NULL THEN 1
+       ELSE 2
+     END) AS depth
   FROM tasks t
   LEFT JOIN clients c ON c.id = t.client_id
   LEFT JOIN projects p ON p.id = t.project_id
+  LEFT JOIN users ou ON ou.id = t.owner_id
 `;
 
 const TYPE_RANK =
