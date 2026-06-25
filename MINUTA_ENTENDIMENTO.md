@@ -1,200 +1,202 @@
-# Minuta de Entendimento do Projeto — Sistema "Tarefo"
+# Minuta de Entendimento — Sistema "Tarefo"
 
 **Cliente:** Azul Administradora — Smart Living
-**Documento:** Minuta de Entendimento (para avaliação e aprovação antes da construção)
+**Produto:** Tarefo — Plataforma de Gestão de Tarefas e Comunicação Interna
+**Documento:** Minuta de Entendimento (v2) — para avaliação e aprovação antes da construção
 **Data:** 25/06/2026
 **Status:** 🟡 Aguardando validação do solicitante
 
-> Este documento descreve o **entendimento** da equipe sobre o que foi solicitado.
-> Ele **não é** o sistema, e sim a base de alinhamento. Após sua aprovação (ou ajustes),
-> seguimos para a construção. Os pontos marcados com ❓ são dúvidas que precisam de
-> confirmação antes de iniciarmos.
+> **Para que serve este documento:** registrar, de forma clara, *o que entendemos* que
+> deve ser construído, *como* pretendemos construir e *em que ordem*. Ele é a base de
+> alinhamento — nada é construído antes da sua aprovação. Itens marcados com ❓ são
+> decisões que dependem de você.
 
 ---
 
-## 1. Visão Geral
+## 1. Em uma frase
 
-Construir o **Tarefo**, uma plataforma web de **gestão de tarefas e comunicação interna**
-da Azul Administradora, hospedada em nuvem, com versionamento e deploy automático a partir
-do **GitHub** (toda alteração feita/aprovada é replicada automaticamente para o ambiente).
-
-O sistema reúne dois grandes pilares integrados:
-
-1. **Gestão de Tarefas** — criação, fluxos, prazos, responsáveis, agendamentos e
-   acompanhamento (visões Kanban e Lista).
-2. **Comunicação Interna** — mensageria no estilo Slack/WhatsApp (1‑para‑1, grupos e
-   **canais por cliente**, que funcionam como um "prontuário" do cliente).
-
-O elo entre os dois pilares é o **Cliente**: tarefas e conversas de um mesmo cliente ficam
-reunidas em um único lugar.
+Uma plataforma web, hospedada em nuvem e com publicação automática via GitHub, que reúne
+**a gestão de tarefas da empresa** (com fluxos, prazos, responsáveis, agendamentos e visões
+Kanban/Lista) e **a comunicação interna** (estilo Slack: conversas, grupos e canais por
+cliente), tendo o **Cliente** como elo que conecta tarefas e conversas em um "prontuário".
 
 ---
 
-## 2. Objetivos do Projeto
+## 2. Objetivos
 
-- Centralizar o cadastro e o acompanhamento de todas as tarefas da empresa.
-- Padronizar fluxos de trabalho recorrentes (tarefas e lotes pré-cadastrados).
-- Dar visibilidade em tempo real do andamento das tarefas (Kanban + Lista filtrável).
-- Concentrar a comunicação interna e o histórico de cada cliente em um só ambiente.
-- Garantir hospedagem em nuvem com deploy contínuo via GitHub.
-- Interface amigável e agradável, alinhada à identidade visual da Azul Administradora.
+| # | Objetivo | Como o Tarefo atende |
+|---|----------|----------------------|
+| 1 | Centralizar e padronizar tarefas | Modelos, lotes, tarefas avulsas e agendadas com fluxos definidos |
+| 2 | Dar visibilidade do andamento | "Meu Tarefo" com Kanban e Lista filtrável |
+| 3 | Concentrar a comunicação e o histórico do cliente | Chat interno + canal/prontuário por cliente |
+| 4 | Operar em nuvem com atualização contínua | Deploy automático a partir do GitHub (CI/CD) |
+| 5 | Interface agradável e com a cara da empresa | UI responsiva na paleta da Azul Administradora |
 
 ---
 
-## 3. Escopo Funcional
+## 3. Conceitos do Sistema (glossário)
 
-### 3.1. Módulo de Tarefas
+- **Tarefa:** unidade de trabalho com responsável, prazo, fluxo e histórico.
+- **Modelo de Tarefa:** tarefa pré-cadastrada (template) com fluxo, responsáveis e prazos já definidos; serve para instanciar tarefas rapidamente.
+- **Lote:** agrupamento de vários modelos que são criados juntos, de uma vez.
+- **Tarefa Agendada:** regra de recorrência que gera tarefas automaticamente (diária/semanal/mensal/anual).
+- **Subtarefa:** tarefa filha, dependente da principal (sequencial ou paralela).
+- **Fluxo / Etapa:** sequência de estágios pelos quais a tarefa avança (cada etapa com responsável e prazo).
+- **Cliente:** entidade de referência da empresa; conecta tarefas e conversas. *(Entendimento: sem login próprio.)*
+- **Projeto:** agrupador opcional de tarefas relacionadas.
+- **Canal do Cliente:** espaço de comunicação que funciona como prontuário — reúne tarefas e conversas daquele cliente.
 
-Quatro formas de originar uma tarefa:
+---
 
-| # | Tipo de origem | Descrição |
-|---|----------------|-----------|
-| A | **Tarefa pré-cadastrada (modelo)** | Tarefas-modelo com fluxo já definido (responsáveis, prazos e procedimentos). O usuário apenas instancia a partir do modelo. |
-| B | **Lote de tarefas pré-cadastradas** | Conjunto de várias tarefas-modelo que são criadas de uma só vez, cada uma com seu fluxo, responsáveis e prazos. |
-| C | **Tarefa avulsa** | Criada manualmente do zero, mas seguindo um fluxo de processos e responsáveis. |
-| D | **Tarefa agendada (recorrente)** | Gerada automaticamente conforme frequência programada (diária, semanal, mensal, anual), com data/hora de início e fim. |
+## 4. Módulos Funcionais
 
-**Campos da tarefa:**
+### 4.1. Tarefas
+
+**Formas de criar uma tarefa:**
+
+| Origem | O que é | Resultado |
+|--------|---------|-----------|
+| **Modelo (pré-cadastrada)** | Instancia a partir de um template | 1 tarefa com fluxo/responsáveis/prazos pré-definidos |
+| **Lote** | Seleciona um conjunto de modelos | Várias tarefas criadas de uma vez |
+| **Avulsa** | Criada do zero | 1 tarefa seguindo um fluxo de processos/responsáveis |
+| **Agendada (recorrente)** | Define frequência e janela (início/fim) | Tarefas geradas automaticamente no tempo |
+
+**Campos da tarefa (conforme solicitado):**
 
 - Nome da tarefa
-- **Tipo / prioridade:** Padrão, Urgente, Prioridade Máxima
+- Tipo / prioridade: **Padrão, Urgente, Prioridade Máxima**
 - Data de Solicitação
 - Data de Início da Tarefa
-- Cliente vinculado (quando aplicável)
+- Cliente (quando aplicável)
 - Descrição
-- **Comentários de evolução** — com registro automático de data, hora e autor
-- **Anexos** — upload de arquivos
-- **Subtarefas** — dependentes da tarefa principal (sequenciais ou paralelas)
-- **Projeto vinculado** — indica se a tarefa pertence a algum projeto
+- Comentários de evolução — com **data, hora e autor** automáticos
+- Anexos (upload de arquivos)
+- Subtarefas (dependentes/sequenciais)
+- Projeto vinculado (sim/não + qual)
 
-> ❓ **A confirmar:** além dos campos acima, normalmente também são úteis:
-> *responsável atual*, *prazo/data de finalização prevista*, *status* e *etapa do fluxo*.
-> Confirmar se devemos incluí-los (recomendamos que sim, pois os filtros de ordenação
-> do "Meu Tarefo" dependem de "data de finalização" e "solicitante").
+**Campos adicionais recomendados** *(para os filtros e o Kanban funcionarem bem)* ❓:
+responsável atual, prazo/data de finalização prevista, status/etapa atual, tags.
 
-#### Fluxos / Procedimentos
-Cada modelo de tarefa pode definir uma sequência de **etapas**, cada uma com responsável
-e prazo. O avanço de etapa pode ser manual (o responsável conclui) e gera registro no
-histórico.
+**Regras de negócio previstas:**
+- Todo comentário, mudança de etapa e de responsável fica registrado no **histórico** (auditoria).
+- Tarefa agendada gera novas tarefas conforme a regra, respeitando a janela início/fim.
+- Subtarefa sequencial só pode iniciar quando a anterior for concluída ❓ *(a confirmar).*
 
-> ❓ **A confirmar:** as etapas do fluxo são livres por tarefa, ou existe um conjunto
-> fixo de status padrão (ex.: *A Fazer → Em Andamento → Em Revisão → Concluída*)?
+### 4.2. "Meu Tarefo" (tela principal)
 
-### 3.2. "Meu Tarefo" (Grid de Tarefas)
-
-Tela principal de trabalho do usuário, com duas visualizações:
-
-- **Kanban:** colunas por status/etapa, cartões arrastáveis.
+- **Kanban:** colunas por etapa/status; cartões arrastáveis entre colunas.
 - **Lista:** com **filtros e ordenação** por prioridade, data de finalização, solicitante,
-  cliente, responsável, projeto, etc.
+  responsável, cliente, projeto e status.
+- Indicadores visuais de prioridade (cores) e de atraso de prazo.
 
-### 3.3. Módulo de Comunicação Interna (estilo Slack)
+### 4.3. Comunicação Interna (estilo Slack)
 
 - **Conversa 1‑para‑1** entre usuários.
-- **Grupos** de conversa (semelhante a grupos de WhatsApp).
-- **Canais por cliente** — um canal por cliente cadastrado, funcionando como
-  **prontuário do cliente**: dá acesso a *todas as tarefas vinculadas* àquele cliente e a
-  *todas as conversas* relacionadas a ele.
+- **Grupos** (semelhante a grupos de WhatsApp).
+- **Canais por cliente (prontuário):** um canal por cliente cadastrado, com acesso a
+  **todas as tarefas** vinculadas e **todas as conversas** daquele cliente.
+- Recursos: mensagens em tempo real, anexos, menções (@), notificações e busca no histórico.
 
-Recursos previstos: envio de mensagens em tempo real, anexos nas mensagens, menções a
-usuários, notificações e histórico pesquisável.
+### 4.4. Usuários, Perfis e Permissões
 
-> ❓ **A confirmar:** o cliente é **externo** (somente referência interna, sem login) ou
-> haverá acesso do próprio cliente ao sistema? (Entendimento atual: cliente é uma
-> entidade de referência, **sem login** — toda a comunicação é entre usuários internos.)
-
-### 3.4. Administração e Segurança
-
-- **Cadastro de usuários** com e-mail e senha.
-- **Perfis de acesso** com permissões cadastráveis (o que cada perfil pode ver/fazer).
-- **Grupos de acesso** — permissões atribuídas por grupo.
-- Cadastro de **Clientes** e de **Projetos** (entidades de apoio usadas pelas tarefas e canais).
+- **Usuários:** cadastro com e-mail e senha (senha com hash).
+- **Perfis de acesso:** conjuntos de permissões cadastráveis (o que cada perfil vê/faz).
+- **Grupos de acesso:** permissões atribuídas por grupo de usuários.
+- **Cadastros de apoio:** Clientes e Projetos.
 
 ---
 
-## 4. Requisitos Não Funcionais
+## 5. Modelo de Dados (visão preliminar)
 
-- **Hospedagem em nuvem** com **deploy automático a partir do GitHub** (CI/CD): toda
-  alteração aprovada é publicada automaticamente no ambiente.
-- **Layout amigável e agradável**, responsivo (desktop e mobile).
-- **Identidade visual** seguindo a paleta da Azul Administradora (ver seção 6).
-- Segurança: senhas com hash, controle de acesso por perfil/grupo, trilha de auditoria
-  (data/hora/autor em comentários e mudanças de etapa).
+Entidades principais e como se relacionam (resumo):
 
----
+- **Usuário** ←→ pertence a → **Grupo de Acesso**; possui um ou mais **Perfis**.
+- **Perfil** → contém → **Permissões**.
+- **Cliente** → possui → muitas **Tarefas** e um **Canal**.
+- **Projeto** → agrupa → muitas **Tarefas**.
+- **Tarefa** → tem → **Comentários**, **Anexos**, **Subtarefas**, **Histórico**, **Etapas**.
+- **Modelo de Tarefa** → instancia → **Tarefa**; **Lote** → agrupa **Modelos**.
+- **Agendamento** → gera → **Tarefas** ao longo do tempo.
+- **Canal / Conversa / Grupo** → contém → **Mensagens** (com autor, data/hora, anexos).
 
-## 5. Arquitetura Técnica Proposta (sugestão)
-
-> Sugestão inicial para discussão — pode ser ajustada conforme preferência da empresa.
-
-| Camada | Tecnologia sugerida | Motivo |
-|--------|--------------------|--------|
-| Frontend | React + TypeScript | Ecossistema maduro, ideal para Kanban e chat |
-| Estilo / UI | Tailwind CSS + biblioteca de componentes | Layout rápido e consistente com a paleta Azul |
-| Backend / API | Node.js (NestJS ou Express) | Produtividade e integração natural com o front |
-| Banco de dados | PostgreSQL | Relacional, robusto para tarefas, clientes e permissões |
-| Tempo real (chat) | WebSocket (Socket.IO) | Mensagens instantâneas e notificações |
-| Armazenamento de anexos | Storage em nuvem (ex.: S3 / equivalente) | Anexos de tarefas e mensagens |
-| Autenticação | JWT + hash de senha (bcrypt) | Login por e-mail/senha e controle de sessão |
-| Hospedagem | Nuvem com deploy via GitHub (ex.: Render, Railway, Vercel/Fly) | Atende ao requisito de replicação automática |
-| Versionamento/CI-CD | GitHub + GitHub Actions | Replicação automática das alterações |
-
-> ❓ **A confirmar:** existe preferência de provedor de nuvem, orçamento ou stack já
-> usada pela empresa? Se não houver, seguimos com a sugestão acima.
+> Diagrama formal (ERD) será entregue na Fase 0, após validação desta minuta.
 
 ---
 
-## 6. Identidade Visual / Paleta de Cores
+## 6. Requisitos Não Funcionais
 
-Paleta extraída da logo **Azul Administradora — Smart Living** (valores aproximados,
-a serem refinados com o arquivo oficial da marca):
-
-| Uso | Cor | Hex aproximado |
-|-----|-----|----------------|
-| Azul escuro (primária / cabeçalhos) | Navy | `#0E4A66` |
-| Azul médio (ações / destaques) | Azul | `#2E89B8` |
-| Azul claro (apoio / detalhes) | Azul claro | `#4FA9DC` |
-| Azul muito claro (fundos / hovers) | Azul suave | `#9FD2EC` |
-| Fundo / superfícies | Branco / cinza claro | `#FFFFFF` / `#F4F7F9` |
-
-> ❓ **A confirmar:** envio do manual de marca / valores oficiais de cor e da logo em alta
-> resolução para uso na interface.
+- **Nuvem + CI/CD:** publicação automática a partir do GitHub a cada alteração aprovada.
+- **Responsivo:** desktop e mobile.
+- **Segurança:** hash de senha, controle de acesso por perfil/grupo, trilha de auditoria.
+- **Identidade visual:** paleta da Azul Administradora (seção 8).
+- **Desempenho:** mensageria em tempo real e listas com paginação/filtragem eficientes.
 
 ---
 
-## 7. Proposta de Fases de Entrega (Roadmap)
+## 7. Arquitetura Técnica (sugestão para discussão)
 
-| Fase | Entregáveis | Resumo |
-|------|-------------|--------|
-| **0 — Setup** | Repositório GitHub, ambiente em nuvem, CI/CD, esqueleto do projeto, paleta aplicada | Infra e deploy automático funcionando |
-| **1 — Núcleo de Tarefas** | Cadastro de tarefas avulsas, campos, comentários, anexos, subtarefas, "Meu Tarefo" (Lista + Kanban) | Coração do sistema |
-| **2 — Usuários e Permissões** | Login, usuários, perfis de acesso, grupos, clientes e projetos | Segurança e cadastros de apoio |
-| **3 — Modelos e Agendamentos** | Tarefas pré-cadastradas, lotes e tarefas agendadas/recorrentes | Automação de fluxos |
-| **4 — Comunicação Interna** | Chat 1‑1, grupos e canais por cliente (prontuário) | Pilar de comunicação |
-| **5 — Refinos** | Notificações, relatórios, ajustes de UX, responsividade | Polimento |
+| Camada | Sugestão | Por quê |
+|--------|----------|---------|
+| Frontend | React + TypeScript + Tailwind CSS | Ágil para Kanban e chat; fácil aplicar a paleta |
+| Backend | Node.js (NestJS) | Estruturado, bom para regras de fluxo e permissões |
+| Banco de dados | PostgreSQL | Relacional e robusto |
+| Tempo real | WebSocket (Socket.IO) | Chat e notificações instantâneas |
+| Anexos | Storage em nuvem (S3 ou equivalente) | Arquivos de tarefas e mensagens |
+| Autenticação | JWT + bcrypt | Login por e-mail/senha |
+| Hospedagem | Nuvem com deploy por GitHub (Render/Railway/Fly/Vercel) | Atende à replicação automática |
+| CI/CD | GitHub Actions | Build, testes e publicação automáticos |
 
----
-
-## 8. Pontos em Aberto (precisam de confirmação) ❓
-
-1. Incluir campos adicionais nas tarefas (responsável atual, prazo de finalização, status/etapa)? *(recomendado: sim)*
-2. As etapas de fluxo são livres por tarefa ou há um conjunto fixo de status padrão?
-3. O Cliente possui login (acesso externo) ou é apenas entidade de referência interna? *(entendimento: só referência)*
-4. Há preferência de stack/provedor de nuvem ou orçamento definido?
-5. Envio do manual de marca e da logo oficial em alta resolução.
-6. Volume estimado de usuários e de tarefas/mês (para dimensionamento).
-7. Necessidade de integrações (e-mail, Google Calendar, WhatsApp, ERP, etc.)?
-8. Idioma do sistema (apenas Português?) e fuso horário padrão.
+> ❓ Existe stack ou provedor já usados pela empresa? Se não, seguimos com o acima.
 
 ---
 
-## 9. Próximos Passos
+## 8. Identidade Visual / Paleta de Cores
 
-1. Você revisa esta minuta e responde aos pontos da seção 8.
-2. Ajustamos o entendimento conforme seu retorno.
-3. Com a minuta aprovada, iniciamos a **Fase 0** (setup do repositório, nuvem e CI/CD) e
-   seguimos pelo roadmap.
+Valores aproximados extraídos da logo (refinaremos com o material oficial da marca):
+
+| Uso | Cor | Hex aprox. |
+|-----|-----|-----------|
+| Primária / cabeçalhos | Navy | `#0E4A66` |
+| Ações / destaques | Azul | `#2E89B8` |
+| Apoio / detalhes | Azul claro | `#4FA9DC` |
+| Fundos / hovers | Azul suave | `#9FD2EC` |
+| Superfícies | Branco / cinza claro | `#FFFFFF` / `#F4F7F9` |
 
 ---
 
-*Documento gerado para avaliação. Nada será construído antes da sua aprovação.*
+## 9. Roadmap de Entrega
+
+| Fase | Entregáveis |
+|------|-------------|
+| **0 — Setup** | Repositório, ambiente em nuvem, CI/CD, esqueleto do app, ERD, paleta aplicada |
+| **1 — Núcleo de Tarefas** | Tarefa avulsa completa (campos, comentários, anexos, subtarefas) + "Meu Tarefo" (Lista + Kanban) |
+| **2 — Usuários e Permissões** | Login, usuários, perfis, grupos, Clientes e Projetos |
+| **3 — Modelos e Agendamentos** | Modelos, lotes e tarefas agendadas/recorrentes |
+| **4 — Comunicação Interna** | Chat 1‑1, grupos e canais por cliente (prontuário) |
+| **5 — Refinos** | Notificações, relatórios, ajustes de UX e responsividade |
+
+---
+
+## 10. Pontos em Aberto (precisam da sua decisão) ❓
+
+1. Incluir os campos adicionais nas tarefas (responsável, prazo de finalização, status/etapa, tags)? *(recomendado: sim)*
+2. Etapas do fluxo: livres por tarefa ou um conjunto fixo padrão (ex.: A Fazer → Em Andamento → Em Revisão → Concluída)?
+3. Subtarefa sequencial bloqueia o início até a anterior concluir?
+4. Cliente tem acesso/login externo ou é apenas referência interna? *(entendimento: só interna)*
+5. Preferência de stack/provedor de nuvem e orçamento?
+6. Envio do manual de marca e da logo oficial em alta resolução.
+7. Volume estimado de usuários e tarefas/mês (dimensionamento).
+8. Integrações desejadas? (e-mail, Google Calendar, Google Drive, WhatsApp, Runrun.it, ERP…)
+9. Idioma (apenas Português?) e fuso horário padrão.
+
+---
+
+## 11. Próximos Passos
+
+1. Você revisa esta minuta e responde aos pontos da seção 10.
+2. Ajustamos conforme seu retorno.
+3. Com a minuta aprovada, iniciamos a **Fase 0** e seguimos pelo roadmap.
+
+---
+
+*Documento para avaliação. Nada será construído antes da sua aprovação.*
