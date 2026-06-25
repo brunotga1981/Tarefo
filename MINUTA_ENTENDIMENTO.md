@@ -148,6 +148,22 @@ Entidades principais e como se relacionam (resumo):
 
 > ❓ Existe stack ou provedor já usados pela empresa? Se não, seguimos com o acima.
 
+### 7.1. Integrações Externas (confirmadas)
+
+| Integração | Serviço | Uso no Tarefo | Como conecta |
+|------------|---------|---------------|--------------|
+| **E-mail** | **Locaweb** | Envio de notificações (atribuição de tarefas, prazos, alertas) | SMTP da Locaweb |
+| **WhatsApp** | **Z-API** | Avisos e comunicação via WhatsApp | API HTTP da Z-API |
+| **ERP** | **Superlógica** | Sincronizar dados (ex.: clientes/contratos) entre o ERP e o Tarefo | API REST da Superlógica |
+
+> **Pontos a detalhar de cada integração** ❓:
+> - **Locaweb (e-mail):** credenciais SMTP (host, porta, usuário, senha) e remetente padrão.
+> - **Z-API (WhatsApp):** instância e token; quais eventos disparam mensagem e modelos de texto.
+> - **Superlógica (ERP):** credenciais/app-token da API; **quais dados** sincronizar
+>   (clientes, contratos, unidades?) e **direção** (ERP → Tarefo, Tarefo → ERP, ou ambos).
+>   *Sugestão inicial:* importar **clientes** da Superlógica para alimentar os cadastros e
+>   os canais/prontuários do Tarefo.
+
 ---
 
 ## 8. Identidade Visual / Paleta de Cores
@@ -186,7 +202,7 @@ Valores aproximados extraídos da logo (refinaremos com o material oficial da ma
 5. Preferência de stack/provedor de nuvem e orçamento?
 6. Envio do manual de marca e da logo oficial em alta resolução.
 7. Volume estimado de usuários e tarefas/mês (dimensionamento).
-8. Integrações desejadas? (e-mail, Google Calendar, Google Drive, WhatsApp, Runrun.it, ERP…)
+8. ✅ **Integrações definidas** (ver seção 7.1): e-mail Locaweb, WhatsApp via Z-API e ERP Superlógica.
 9. Idioma (apenas Português?) e fuso horário padrão.
 
 ---
