@@ -9,12 +9,14 @@ import {
   getComments,
   getAttachments,
   getCollaborators,
+  getParticipants,
   listUsersBasic,
   canViewTask,
 } from "@/lib/data";
 import { TYPE_LABELS, TYPE_BADGE, STATUS_LABELS } from "@/lib/constants";
 import { formatDate, formatDateTime, isOverdue } from "@/lib/format";
 import { StatusSelect } from "@/components/tarefo/StatusSelect";
+import { FinishTask } from "@/components/tarefo/FinishTask";
 import { ResetForm } from "@/components/tarefo/ResetForm";
 import {
   addCommentAction,
@@ -53,13 +55,14 @@ export default async function TaskDetailPage({
   const task = await getTask(params.id);
   if (!task) notFound();
 
-  const [subtasks, comments, attachments, collaborators, users] =
+  const [subtasks, comments, attachments, collaborators, users, participants] =
     await Promise.all([
       getSubtasks(task.id),
       getComments(task.id, user.id),
       getAttachments(task.id),
       getCollaborators(task.id),
       listUsersBasic(),
+      getParticipants(task.id),
     ]);
 
   const collabIds = new Set(collaborators.map((c) => c.id));
@@ -67,6 +70,14 @@ export default async function TaskDetailPage({
     (u) => !collabIds.has(u.id) && u.id !== task.owner_id
   );
   const overdue = isOverdue(task.due_date, task.status);
+
+  const total = participants.length;
+  const doneCount = participants.filter((p) => p.done).length;
+  const sharePct = total > 0 ? Math.round(100 / total) : 0;
+  const progressPct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
+  const me = participants.find((p) => p.id === user.id);
+  const isParticipant = !!me;
+  const concluded = task.status === "CONCLUIDA";
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -98,9 +109,25 @@ export default async function TaskDetailPage({
               </Link>
             )}
           </div>
-          <div className="w-44">
-            <span className="mb-1 block text-xs text-slate-400">Status</span>
-            <StatusSelect id={task.id} status={task.status} />
+          <div className="flex items-start gap-3">
+            <div className="w-44">
+              <span className="mb-1 block text-xs text-slate-400">Status</span>
+              <StatusSelect id={task.id} status={task.status} />
+            </div>
+            {concluded ? (
+              <span className="mt-5 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
+                ✓ Concluída
+              </span>
+            ) : (
+              <div className="mt-5">
+                <FinishTask
+                  taskId={task.id}
+                  canFinishMine={isParticipant}
+                  canFinishAll={isParticipant || canViewAll}
+                  myDone={!!me?.done}
+                />
+              </div>
+            )}
           </div>
         </div>
 
@@ -141,6 +168,43 @@ export default async function TaskDetailPage({
           </div>
         )}
       </div>
+
+      {/* Responsabilidade dividida */}
+      <section className="mb-6 rounded-xl border border-slate-200 bg-white p-5">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-azul-navy">
+            ⚖️ Responsabilidade dividida
+          </h2>
+          <span className="text-xs text-slate-500">
+            {total} participante{total === 1 ? "" : "s"} · {sharePct}% cada ·{" "}
+            {progressPct}% concluído
+          </span>
+        </div>
+        <div className="mb-3 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+          <div
+            className="h-full rounded-full bg-emerald-500 transition-all"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {participants.map((p) => (
+            <span
+              key={p.id}
+              className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs ${
+                p.done
+                  ? "bg-emerald-50 text-emerald-700"
+                  : "bg-slate-100 text-slate-600"
+              }`}
+            >
+              {p.done ? "✓" : "•"} {p.name}
+              {p.is_owner && (
+                <span className="text-[10px] text-slate-400">(dono)</span>
+              )}
+              <span className="text-[10px] text-slate-400">{sharePct}%</span>
+            </span>
+          ))}
+        </div>
+      </section>
 
       {/* Colaboradores */}
       <section className="mb-6 rounded-xl border border-slate-200 bg-white p-5">

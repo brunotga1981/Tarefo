@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { query } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, can } from "@/lib/auth";
+import { getParticipantIds } from "@/lib/data";
 
 function nullable(v: FormDataEntryValue | null): string | null {
   const s = typeof v === "string" ? v.trim() : "";
@@ -157,6 +158,64 @@ export async function removeCollaboratorAction(formData: FormData) {
     `DELETE FROM task_collaborators WHERE task_id = $1 AND user_id = $2`,
     [taskId, userId]
   );
+  revalidatePath("/meu-tarefo");
+  revalidatePath(`/meu-tarefo/${taskId}`);
+}
+
+// Finaliza apenas a colaboração do usuário atual.
+export async function finalizeMyShareAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) return;
+  const taskId = String(formData.get("task_id"));
+
+  const participants = await getParticipantIds(taskId);
+  if (!participants.includes(user.id)) return; // não é participante
+
+  await query(
+    `INSERT INTO task_completions (task_id, user_id) VALUES ($1,$2)
+     ON CONFLICT DO NOTHING`,
+    [taskId, user.id]
+  );
+
+  // Se todos os participantes concluíram, a tarefa é finalizada por completo.
+  const done = await query<{ count: string }>(
+    `SELECT count(*)::int AS count FROM task_completions WHERE task_id = $1`,
+    [taskId]
+  );
+  if (Number(done[0]?.count ?? 0) >= participants.length) {
+    await query(
+      `UPDATE tasks SET status = 'CONCLUIDA', updated_at = now() WHERE id = $1`,
+      [taskId]
+    );
+  }
+
+  revalidatePath("/meu-tarefo");
+  revalidatePath(`/meu-tarefo/${taskId}`);
+}
+
+// Finaliza 100% da tarefa (marca todos os participantes e conclui).
+export async function finalizeWholeAction(formData: FormData) {
+  const user = await getCurrentUser();
+  if (!user) return;
+  const taskId = String(formData.get("task_id"));
+
+  const participants = await getParticipantIds(taskId);
+  const allowed =
+    participants.includes(user.id) || can(user, "tasks.view_all");
+  if (!allowed) return;
+
+  for (const uid of participants) {
+    await query(
+      `INSERT INTO task_completions (task_id, user_id) VALUES ($1,$2)
+       ON CONFLICT DO NOTHING`,
+      [taskId, uid]
+    );
+  }
+  await query(
+    `UPDATE tasks SET status = 'CONCLUIDA', updated_at = now() WHERE id = $1`,
+    [taskId]
+  );
+
   revalidatePath("/meu-tarefo");
   revalidatePath(`/meu-tarefo/${taskId}`);
 }

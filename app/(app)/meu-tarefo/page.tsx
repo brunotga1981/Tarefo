@@ -205,6 +205,12 @@ function KanbanCard({
             {overdue && " (atrasada)"}
           </p>
           {!!task.subtask_count && <p>🧩 {task.subtask_count} subtarefa(s)</p>}
+          {(task.participants_total ?? 0) > 1 && (
+            <p>
+              ⚖️ {task.participants_done ?? 0}/{task.participants_total}{" "}
+              colaboração(ões) concluída(s)
+            </p>
+          )}
         </div>
       </Link>
       {!showMention && (

@@ -113,6 +113,14 @@ CREATE TABLE IF NOT EXISTS mentions (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- Finalização individual de cada participante (dono + colaboradores)
+CREATE TABLE IF NOT EXISTS task_completions (
+  task_id text NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (task_id, user_id)
+);
+
 -- A coluna "Em Revisão" foi substituída por "Marcação de Tarefa - MD".
 UPDATE tasks SET status = 'EM_ANDAMENTO' WHERE status = 'EM_REVISAO';
 `;

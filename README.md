@@ -21,6 +21,11 @@ Regras de tarefa adicionais:
 - **Marcação de Tarefa - MD:** ao escrever **@usuario** num comentário, a tarefa entra na
   coluna "Marcação de Tarefa - MD" da pessoa marcada. No comentário há um botão **Check**
   para baixar (resolver) a marcação.
+- **Responsabilidade dividida:** a responsabilidade é dividida igualmente entre os
+  participantes (dono + colaboradores). O botão **Finalizar Tarefa** oferece:
+  *(1) Finalizar apenas a sua Colaboração* — conclui a sua parte; ou
+  *(2) Finalizar 100% da Tarefa* — conclui tudo. Quando todos finalizam a sua parte,
+  a tarefa é concluída automaticamente.
 
 Fase 1 — Núcleo de Tarefas: cadastro completo de tarefas com persistência em
 PostgreSQL, visões **Kanban** e **Lista** com ordenação, página de detalhe com

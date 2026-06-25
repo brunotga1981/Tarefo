@@ -22,6 +22,8 @@ export type TaskRow = {
   subtask_count?: number;
   is_collaborator?: boolean;
   pending_mentions?: number;
+  participants_total?: number;
+  participants_done?: number;
 };
 
 export type Named = { id: string; name: string };
@@ -59,7 +61,10 @@ export async function listVisibleTasks(
     `SELECT t.*, c.name AS client_name, p.name AS project_name,
        (SELECT count(*)::int FROM tasks s WHERE s.parent_id = t.id) AS subtask_count,
        EXISTS (SELECT 1 FROM task_collaborators tc WHERE tc.task_id = t.id AND tc.user_id = $1) AS is_collaborator,
-       (SELECT count(*)::int FROM mentions m WHERE m.task_id = t.id AND m.user_id = $1 AND m.resolved = false) AS pending_mentions
+       (SELECT count(*)::int FROM mentions m WHERE m.task_id = t.id AND m.user_id = $1 AND m.resolved = false) AS pending_mentions,
+       ((CASE WHEN t.owner_id IS NOT NULL THEN 1 ELSE 0 END)
+         + (SELECT count(*)::int FROM task_collaborators tc WHERE tc.task_id = t.id AND tc.user_id IS DISTINCT FROM t.owner_id)) AS participants_total,
+       (SELECT count(*)::int FROM task_completions cp WHERE cp.task_id = t.id) AS participants_done
      FROM tasks t
      LEFT JOIN clients c ON c.id = t.client_id
      LEFT JOIN projects p ON p.id = t.project_id
@@ -153,6 +158,36 @@ export async function listUsersBasic(): Promise<
   { id: string; name: string; username: string | null }[]
 > {
   return query(`SELECT id, name, username FROM users ORDER BY name`);
+}
+
+export type Participant = {
+  id: string;
+  name: string;
+  is_owner: boolean;
+  done: boolean;
+};
+
+// Participantes da tarefa = dono + colaboradores (cada um divide a responsabilidade).
+export async function getParticipants(taskId: string): Promise<Participant[]> {
+  const o = await query<{ owner_id: string | null }>(
+    `SELECT owner_id FROM tasks WHERE id = $1`,
+    [taskId]
+  );
+  const owner = o[0]?.owner_id ?? null;
+  return query<Participant>(
+    `SELECT u.id, u.name,
+       (u.id = $2) AS is_owner,
+       EXISTS (SELECT 1 FROM task_completions cp WHERE cp.task_id = $1 AND cp.user_id = u.id) AS done
+     FROM users u
+     WHERE u.id = $2
+        OR u.id IN (SELECT user_id FROM task_collaborators WHERE task_id = $1)
+     ORDER BY is_owner DESC, u.name`,
+    [taskId, owner]
+  );
+}
+
+export async function getParticipantIds(taskId: string): Promise<string[]> {
+  return (await getParticipants(taskId)).map((p) => p.id);
 }
 
 export async function listClients(): Promise<Named[]> {
