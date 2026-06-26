@@ -219,4 +219,12 @@ CREATE TABLE IF NOT EXISTS conversation_ratings (
   score integer NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now()
 );
+
+-- Controle de leitura das conversas (para alertas de mensagens novas)
+CREATE TABLE IF NOT EXISTS conversation_reads (
+  conversation_id text NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  last_read_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (conversation_id, user_id)
+);
 `;

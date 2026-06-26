@@ -16,6 +16,7 @@ import {
   PRESENCE_DOT,
 } from "@/lib/chat";
 import { getClientRAC } from "@/lib/rac";
+import { markConversationRead } from "@/lib/notifications";
 import { MessageList } from "@/components/torpedo/MessageList";
 import { Composer } from "@/components/torpedo/Composer";
 import { RAC } from "@/components/torpedo/RAC";
@@ -54,6 +55,8 @@ export default async function TorpedoPage({
   const messages = conversation
     ? await getMessages(conversation.id, user.id)
     : [];
+  // Marca a conversa aberta como lida (limpa o alerta dela).
+  if (conversation) await markConversationRead(conversation.id, user.id);
   const rac =
     conversation?.type === "CLIENT" && conversation.client_id
       ? await getClientRAC(conversation.client_id)
