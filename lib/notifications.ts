@@ -3,7 +3,7 @@ import { query } from "./db";
 export type Notifications = {
   torpedo: number; // mensagens não lidas em DMs/grupos
   canal: number; // mensagens não lidas em canais de cliente (seguidos)
-  tarefa: number; // tarefas suas atrasadas (não concluídas e vencidas)
+  tarefa: number; // novas tarefas atribuídas a você desde a última visita ao quadro
   mt: number; // Marcações de Tarefas (MT) pendentes
 };
 
@@ -37,10 +37,10 @@ export async function getNotifications(userId: string): Promise<Notifications> {
     [userId]
   );
 
-  // Tarefas suas (dono ou colaborador) atrasadas e não concluídas.
+  // Novas tarefas atribuídas a você (dono ou colaborador) desde a última visita ao quadro.
   const tarefa = await query<{ count: number }>(
     `SELECT count(*)::int AS count FROM tasks t
-     WHERE t.status <> 'CONCLUIDA' AND t.due_date IS NOT NULL AND t.due_date < now()
+     WHERE t.created_at > COALESCE((SELECT tasks_seen_at FROM users WHERE id = $1), to_timestamp(0))
        AND (t.owner_id = $1
             OR EXISTS (SELECT 1 FROM task_collaborators tc
                        WHERE tc.task_id = t.id AND tc.user_id = $1))`,
@@ -66,4 +66,9 @@ export async function markConversationRead(
      DO UPDATE SET last_read_at = now()`,
     [conversationId, userId]
   );
+}
+
+// Marca o quadro de tarefas como visto (zera o alerta de novas tarefas).
+export async function markTasksSeen(userId: string): Promise<void> {
+  await query(`UPDATE users SET tasks_seen_at = now() WHERE id = $1`, [userId]);
 }

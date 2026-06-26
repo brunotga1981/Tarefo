@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser, can } from "@/lib/auth";
 import { listVisibleTasks, type TaskRow } from "@/lib/data";
 import { runDueSchedules } from "@/lib/templates";
+import { markTasksSeen } from "@/lib/notifications";
 import { STATUS_LABELS, TYPE_LABELS, TYPE_BADGE } from "@/lib/constants";
 import { formatDate, isOverdue } from "@/lib/format";
 import { StatusSelect } from "@/components/tarefo/StatusSelect";
@@ -44,6 +45,9 @@ export default async function MeuTarefoPage({
   const view = searchParams.view === "lista" ? "lista" : "kanban";
   const sort = searchParams.sort ?? "priority";
   const tasks = await listVisibleTasks(user.id, canViewAll, sort);
+
+  // Marca as tarefas como vistas (zera o alerta de novas tarefas).
+  await markTasksSeen(user.id);
 
   return (
     <div>
