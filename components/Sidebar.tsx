@@ -11,7 +11,7 @@ type NavItem = {
 
 const NAV: NavItem[] = [
   { label: "Meu Tarefo", href: "/meu-tarefo", icon: "📋", perm: "tasks.view" },
-  { label: "Comunicação", href: "#", icon: "💬", soon: true },
+  { label: "Comunicação", href: "/comunicacao", icon: "💬" },
   { label: "Clientes", href: "/clientes", icon: "🏢", perm: "clients.view" },
   { label: "Projetos", href: "/projetos", icon: "📁", perm: "projects.view" },
   {

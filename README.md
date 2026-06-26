@@ -6,6 +6,11 @@ Sistema de **gestão de tarefas e comunicação interna** da **Azul Administrado
 
 ## Status
 
+**Fase 4 — Comunicação interna** (concluída): mensageria estilo Slack com
+**conversas 1‑a‑1**, **grupos** e **canais por cliente**. O canal do cliente funciona
+como **prontuário**, reunindo as tarefas vinculadas ao cliente junto das conversas.
+As mensagens atualizam quase em tempo real (atualização automática por polling).
+
 **Fase 3 — Modelos, Lotes e Agendamentos** (concluída):
 
 - **Modelos de tarefa** pré-cadastrados, com tipo, responsável padrão, prazo (em dias),
@@ -101,6 +106,6 @@ Ver seção 9 da [minuta](./MINUTA_ENTENDIMENTO.md). Resumo:
 0. **Setup** — estrutura, CI/CD, paleta, tela inicial ✅
 1. **Núcleo de Tarefas** — cadastro completo + Kanban/Lista ✅
 2. **Usuários e Permissões** — login, perfis, grupos, clientes, projetos ✅
-3. **Modelos e Agendamentos** — templates, lotes e recorrências ✅ (atual)
-4. **Comunicação Interna** — chat 1‑1, grupos e canais por cliente
+3. **Modelos e Agendamentos** — templates, lotes e recorrências ✅
+4. **Comunicação Interna** — chat 1‑1, grupos e canais por cliente ✅ (atual)
 5. **Refinos** — notificações, relatórios, UX

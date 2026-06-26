@@ -171,4 +171,28 @@ CREATE TABLE IF NOT EXISTS task_schedules (
   active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now()
 );
+
+-- Fase 4: comunicação interna
+CREATE TABLE IF NOT EXISTS conversations (
+  id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  type text NOT NULL, -- DM | GROUP | CLIENT
+  name text,
+  client_id text REFERENCES clients(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS conversation_members (
+  conversation_id text NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  PRIMARY KEY (conversation_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS messages (
+  id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  conversation_id text NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  author_id text REFERENCES users(id) ON DELETE SET NULL,
+  author_name text NOT NULL,
+  body text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
 `;
