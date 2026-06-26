@@ -15,9 +15,7 @@ import {
   createTemplateAction,
   addTemplateStepAction,
   deleteTemplateStepAction,
-  instantiateTemplateAction,
   createBatchAction,
-  instantiateBatchAction,
 } from "./actions";
 
 const field =
@@ -115,12 +113,6 @@ export default async function ModelosPage() {
                   {t.client_name && ` · 🏢 ${t.client_name}`}
                 </p>
               </div>
-              <form action={instantiateTemplateAction}>
-                <input type="hidden" name="template_id" value={t.id} />
-                <button className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700">
-                  ▶ Criar tarefa
-                </button>
-              </form>
             </div>
 
             {/* Etapas / procedimentos */}
@@ -229,12 +221,9 @@ export default async function ModelosPage() {
                 {batchTemplateIds[i].length} modelo(s)
               </p>
             </div>
-            <form action={instantiateBatchAction}>
-              <input type="hidden" name="batch_id" value={b.id} />
-              <button className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700">
-                ▶ Criar lote de tarefas
-              </button>
-            </form>
+            <span className="text-xs text-slate-400">
+              Para criar as tarefas, use “Nova tarefa → Em lote”.
+            </span>
           </div>
         ))}
       </div>

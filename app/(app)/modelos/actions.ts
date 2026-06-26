@@ -12,6 +12,13 @@ async function requireManage() {
   return user!;
 }
 
+// Criar tarefas (a partir de modelo/lote) requer apenas permissão de criar tarefas.
+async function requireCreate() {
+  const user = await getCurrentUser();
+  if (!can(user, "tasks.manage")) throw new Error("Sem permissão.");
+  return user!;
+}
+
 function str(fd: FormData, k: string): string {
   return String(fd.get(k) ?? "").trim();
 }
@@ -62,7 +69,7 @@ export async function deleteTemplateStepAction(fd: FormData) {
 }
 
 export async function instantiateTemplateAction(fd: FormData) {
-  const user = await requireManage();
+  const user = await requireCreate();
   const id = await instantiateTemplate(str(fd, "template_id"), user.id);
   revalidatePath("/meu-tarefo");
   if (id) redirect(`/meu-tarefo/${id}`);
@@ -88,7 +95,7 @@ export async function createBatchAction(fd: FormData) {
 }
 
 export async function instantiateBatchAction(fd: FormData) {
-  const user = await requireManage();
+  const user = await requireCreate();
   await instantiateBatch(str(fd, "batch_id"), user.id);
   revalidatePath("/meu-tarefo");
   redirect("/meu-tarefo");
