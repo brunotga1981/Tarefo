@@ -3,7 +3,8 @@ import { query } from "./db";
 export type Notifications = {
   torpedo: number; // mensagens não lidas em DMs/grupos
   canal: number; // mensagens não lidas em canais de cliente (seguidos)
-  tarefa: number; // marcações (MD) pendentes
+  tarefa: number; // tarefas suas atrasadas (não concluídas e vencidas)
+  mt: number; // Marcações de Tarefas (MT) pendentes
 };
 
 export async function getNotifications(userId: string): Promise<Notifications> {
@@ -30,9 +31,19 @@ export async function getNotifications(userId: string): Promise<Notifications> {
     [userId]
   );
 
-  const tarefa = await query<{ count: number }>(
+  const mt = await query<{ count: number }>(
     `SELECT count(*)::int AS count FROM mentions
      WHERE user_id = $1 AND resolved = false`,
+    [userId]
+  );
+
+  // Tarefas suas (dono ou colaborador) atrasadas e não concluídas.
+  const tarefa = await query<{ count: number }>(
+    `SELECT count(*)::int AS count FROM tasks t
+     WHERE t.status <> 'CONCLUIDA' AND t.due_date IS NOT NULL AND t.due_date < now()
+       AND (t.owner_id = $1
+            OR EXISTS (SELECT 1 FROM task_collaborators tc
+                       WHERE tc.task_id = t.id AND tc.user_id = $1))`,
     [userId]
   );
 
@@ -40,6 +51,7 @@ export async function getNotifications(userId: string): Promise<Notifications> {
     torpedo: torpedo[0]?.count ?? 0,
     canal: canal[0]?.count ?? 0,
     tarefa: tarefa[0]?.count ?? 0,
+    mt: mt[0]?.count ?? 0,
   };
 }
 

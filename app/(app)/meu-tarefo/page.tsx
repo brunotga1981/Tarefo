@@ -20,7 +20,7 @@ const SORTS = [
 const COLUMNS = [
   { key: "A_FAZER", label: "A Fazer", kind: "status" as const },
   { key: "EM_ANDAMENTO", label: "Em Andamento", kind: "status" as const },
-  { key: "MD", label: "Marcação de Tarefa - MD", kind: "mentions" as const },
+  { key: "MD", label: "Marcação de Tarefas - MT", kind: "mentions" as const },
   { key: "CONCLUIDA", label: "Concluída", kind: "status" as const },
 ];
 
@@ -114,7 +114,7 @@ export default async function MeuTarefoPage({
         </span>
         <span className="flex items-center gap-1.5">
           <span className="inline-block h-3 w-3 rounded bg-azul-suave" />
-          Marcação de Tarefa (MD): você foi @mencionado
+          Marcação de Tarefas (MT): você foi @mencionado
         </span>
       </div>
 
@@ -294,7 +294,7 @@ function ListView({ tasks }: { tasks: TaskRow[] }) {
                   )}
                   {!!t.pending_mentions && (
                     <span className="ml-1 rounded bg-azul px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                      MD
+                      MT
                     </span>
                   )}
                 </td>

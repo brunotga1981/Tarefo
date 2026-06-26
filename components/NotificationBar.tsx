@@ -40,6 +40,12 @@ export function NotificationBar({ notif }: { notif: Notifications }) {
       <Item href="/comunicacao" icon="💬" label="Torpedo" count={notif.torpedo} />
       <Item href="/comunicacao" icon="🏢" label="Canal" count={notif.canal} />
       <Item href="/meu-tarefo" icon="📋" label="Tarefa" count={notif.tarefa} />
+      <Item
+        href="/meu-tarefo?view=kanban"
+        icon="📌"
+        label="MT"
+        count={notif.mt}
+      />
     </div>
   );
 }

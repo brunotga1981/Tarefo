@@ -324,7 +324,7 @@ export default async function TaskDetailPage({
     <div>
       <p className="mb-3 text-xs text-slate-400">
         Use <span className="font-semibold text-azul">@usuario</span> para marcar
-        alguém — a tarefa aparecerá na coluna “Marcação de Tarefa - MD” dessa
+        alguém — a tarefa aparecerá na coluna “Marcação de Tarefas - MT” dessa
         pessoa.
       </p>
       <ResetForm action={addCommentAction} className="mb-5 space-y-2">
