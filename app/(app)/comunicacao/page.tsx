@@ -8,7 +8,6 @@ import {
   listGroupsFor,
   getConversation,
   getMessages,
-  getClientTasks,
   getUserScore,
   computeTMR,
   listShareTargets,
@@ -16,9 +15,11 @@ import {
   PRESENCE_OPTIONS,
   PRESENCE_DOT,
 } from "@/lib/chat";
-import { STATUS_LABELS } from "@/lib/constants";
+import { getClientRAC } from "@/lib/rac";
 import { MessageList } from "@/components/torpedo/MessageList";
 import { Composer } from "@/components/torpedo/Composer";
+import { RAC } from "@/components/torpedo/RAC";
+import { Tabs } from "@/components/tarefo/Tabs";
 import { AutoRefresh } from "@/components/tarefo/AutoRefresh";
 import {
   openDMAction,
@@ -53,10 +54,10 @@ export default async function TorpedoPage({
   const messages = conversation
     ? await getMessages(conversation.id, user.id)
     : [];
-  const clientTasks =
+  const rac =
     conversation?.type === "CLIENT" && conversation.client_id
-      ? await getClientTasks(conversation.client_id)
-      : [];
+      ? await getClientRAC(conversation.client_id)
+      : null;
 
   const tmr = conversation ? computeTMR(messages) : null;
   const otherScore =
@@ -240,42 +241,50 @@ export default async function TorpedoPage({
               </div>
             )}
 
-            {/* R.A.C do cliente */}
-            {conversation.type === "CLIENT" && (
-              <div className="border-b border-slate-100 bg-azul-bg/60 px-5 py-3">
-                <p className="mb-1 text-[11px] font-semibold uppercase text-slate-400">
-                  R.A.C — Relatório de Acompanhamento de Cliente
-                </p>
-                {clientTasks.length === 0 ? (
-                  <p className="text-xs text-slate-400">
-                    Nenhuma tarefa vinculada a este cliente.
-                  </p>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {clientTasks.map((t) => (
-                      <Link
-                        key={t.id}
-                        href={`/meu-tarefo/${t.id}`}
-                        className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 hover:border-azul hover:text-azul"
-                      >
-                        {t.name}{" "}
-                        <span className="text-[10px] text-slate-400">
-                          · {STATUS_LABELS[t.status]}
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                )}
+            {conversation.type === "CLIENT" && rac ? (
+              <div className="flex-1 overflow-hidden">
+                <div className="px-4 pt-2">
+                  <Tabs
+                    tabs={[
+                      {
+                        key: "rac",
+                        label: "R.A.C — Relatório de Acompanhamento de Cliente",
+                        content: <RAC items={rac.items} summary={rac.summary} />,
+                      },
+                      {
+                        key: "conversa",
+                        label: "Conversa",
+                        content: (
+                          <div className="flex h-[68vh] flex-col">
+                            <MessageList
+                              messages={messages}
+                              userId={user.id}
+                              shareTargets={shareTargets}
+                            />
+                            <Composer
+                              conversationId={conversation.id}
+                              shareTargets={shareTargets}
+                            />
+                          </div>
+                        ),
+                      },
+                    ]}
+                  />
+                </div>
               </div>
+            ) : (
+              <>
+                <MessageList
+                  messages={messages}
+                  userId={user.id}
+                  shareTargets={shareTargets}
+                />
+                <Composer
+                  conversationId={conversation.id}
+                  shareTargets={shareTargets}
+                />
+              </>
             )}
-
-            <MessageList
-              messages={messages}
-              userId={user.id}
-              shareTargets={shareTargets}
-            />
-
-            <Composer conversationId={conversation.id} shareTargets={shareTargets} />
           </>
         )}
       </section>
