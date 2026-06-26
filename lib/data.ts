@@ -172,9 +172,12 @@ export async function getCollaborators(taskId: string): Promise<Named[]> {
 }
 
 export async function listUsersBasic(): Promise<
-  { id: string; name: string; username: string | null }[]
+  { id: string; name: string; username: string | null; presence: string }[]
 > {
-  return query(`SELECT id, name, username FROM users ORDER BY name`);
+  return query(
+    `SELECT id, name, username, COALESCE(presence,'Disponível') AS presence
+     FROM users ORDER BY name`
+  );
 }
 
 export type Participant = {

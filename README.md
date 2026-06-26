@@ -6,10 +6,18 @@ Sistema de **gestão de tarefas e comunicação interna** da **Azul Administrado
 
 ## Status
 
-**Fase 4 — Comunicação interna** (concluída): mensageria estilo Slack com
-**conversas 1‑a‑1**, **grupos** e **canais por cliente**. O canal do cliente funciona
-como **prontuário**, reunindo as tarefas vinculadas ao cliente junto das conversas.
-As mensagens atualizam quase em tempo real (atualização automática por polling).
+**Fase 4 — Torpedo (Comunicação interna)** (concluída): mensageria estilo Slack com
+**conversas 1‑a‑1**, **grupos** e **canais por cliente** (o canal do cliente é o **R.A.C —
+Relatório de Acompanhamento de Cliente**, reunindo as tarefas do cliente junto das conversas).
+Recursos do chat: **status de presença** (Disponível/Ocupado/Em Reunião/Indisponível),
+**reações** com emoji, **anexos**, **emojis e formatação** (**negrito**/*itálico*),
+**encaminhar/compartilhar** mensagens (inclusive via “/”), **TMR** (tempo médio de resposta),
+**Finalizar Conversa** com **avaliação 0–5 anônima** e **Score** agregado por usuário.
+Atualização quase em tempo real por polling.
+
+> Itens que dependem de chaves externas (a ativar): score por **IA de sentimento**
+> (promotor/neutro/detrator), análise de 90 dias do R.A.C por **agente Claude**
+> (`ANTHROPIC_API_KEY`) e avaliação do cliente por **WhatsApp/e-mail** (Z-API/Locaweb).
 
 **Fase 3 — Modelos, Lotes e Agendamentos** (concluída):
 

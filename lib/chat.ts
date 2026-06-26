@@ -6,15 +6,38 @@ export type Conversation = {
   name: string | null;
   client_id: string | null;
   client_name?: string | null;
+  started_by?: string | null;
+  finalized_at?: string | null;
+  other_id?: string | null; // DM: id do outro participante
   title?: string;
 };
+
+export type ReactionGroup = { emoji: string; count: number; mine: boolean };
 
 export type Message = {
   id: string;
   author_id: string | null;
   author_name: string;
   body: string;
+  file_url: string | null;
+  file_name: string | null;
+  forwarded_from: string | null;
   created_at: string;
+  reactions?: ReactionGroup[];
+};
+
+export const PRESENCE_OPTIONS = [
+  "Disponível",
+  "Ocupado",
+  "Em Reunião",
+  "Indisponível",
+] as const;
+
+export const PRESENCE_DOT: Record<string, string> = {
+  Disponível: "bg-emerald-500",
+  Ocupado: "bg-red-500",
+  "Em Reunião": "bg-amber-500",
+  Indisponível: "bg-slate-400",
 };
 
 // Encontra ou cria a conversa 1-a-1 entre dois usuários.
@@ -29,7 +52,8 @@ export async function findOrCreateDM(a: string, b: string): Promise<string> {
   if (found[0]) return found[0].id;
 
   const created = await query<{ id: string }>(
-    `INSERT INTO conversations (type) VALUES ('DM') RETURNING id`
+    `INSERT INTO conversations (type, started_by) VALUES ('DM', $1) RETURNING id`,
+    [a]
   );
   const id = created[0].id;
   await query(
@@ -90,7 +114,8 @@ export async function getConversation(
   userId: string
 ): Promise<Conversation | null> {
   const rows = await query<Conversation>(
-    `SELECT c.id, c.type, c.name, c.client_id, cl.name AS client_name
+    `SELECT c.id, c.type, c.name, c.client_id, c.started_by, c.finalized_at,
+            cl.name AS client_name
      FROM conversations c
      LEFT JOIN clients cl ON cl.id = c.client_id
      WHERE c.id = $1`,
@@ -100,7 +125,7 @@ export async function getConversation(
   if (!c) return null;
 
   if (c.type === "CLIENT") {
-    c.title = `🏢 ${c.client_name} — Prontuário`;
+    c.title = `🏢 ${c.client_name} — R.A.C`;
     return c;
   }
 
@@ -114,23 +139,113 @@ export async function getConversation(
     c.title = `👪 ${c.name}`;
   } else {
     // DM: título é o nome do outro participante
-    const other = await query<{ name: string }>(
-      `SELECT u.name FROM conversation_members m
+    const other = await query<{ id: string; name: string }>(
+      `SELECT u.id, u.name FROM conversation_members m
        JOIN users u ON u.id = m.user_id
        WHERE m.conversation_id = $1 AND m.user_id <> $2 LIMIT 1`,
       [id, userId]
     );
     c.title = other[0]?.name ?? "Conversa";
+    c.other_id = other[0]?.id ?? null;
   }
   return c;
 }
 
-export async function getMessages(conversationId: string): Promise<Message[]> {
-  return query<Message>(
-    `SELECT id, author_id, author_name, body, created_at
+export async function getMessages(
+  conversationId: string,
+  userId: string
+): Promise<Message[]> {
+  const msgs = await query<Message>(
+    `SELECT id, author_id, author_name, body, file_url, file_name, forwarded_from, created_at
      FROM messages WHERE conversation_id = $1 ORDER BY created_at ASC`,
     [conversationId]
   );
+  if (msgs.length === 0) return msgs;
+  const ids = msgs.map((m) => m.id);
+  const reactions = await query<{
+    message_id: string;
+    emoji: string;
+    count: number;
+    mine: boolean;
+  }>(
+    `SELECT message_id, emoji, count(*)::int AS count, bool_or(user_id = $2) AS mine
+     FROM message_reactions WHERE message_id = ANY($1)
+     GROUP BY message_id, emoji ORDER BY emoji`,
+    [ids, userId]
+  );
+  for (const m of msgs) {
+    m.reactions = reactions
+      .filter((r) => r.message_id === m.id)
+      .map((r) => ({ emoji: r.emoji, count: r.count, mine: r.mine }));
+  }
+  return msgs;
+}
+
+// Tempo Médio de Resposta (em minutos) entre interlocutores diferentes.
+export function computeTMR(messages: Message[]): number | null {
+  let totalMs = 0;
+  let n = 0;
+  for (let i = 1; i < messages.length; i++) {
+    const prev = messages[i - 1];
+    const cur = messages[i];
+    if (prev.author_id && cur.author_id && prev.author_id !== cur.author_id) {
+      const diff =
+        new Date(cur.created_at).getTime() - new Date(prev.created_at).getTime();
+      if (diff >= 0) {
+        totalMs += diff;
+        n++;
+      }
+    }
+  }
+  if (n === 0) return null;
+  return Math.round(totalMs / n / 60000);
+}
+
+// Score do usuário (média das avaliações recebidas, anônima).
+export async function getUserScore(
+  userId: string
+): Promise<{ avg: number | null; count: number }> {
+  const rows = await query<{ avg: string | null; count: string }>(
+    `SELECT avg(score)::numeric(10,2) AS avg, count(*)::int AS count
+     FROM conversation_ratings WHERE rated_user_id = $1`,
+    [userId]
+  );
+  return {
+    avg: rows[0]?.avg != null ? Number(rows[0].avg) : null,
+    count: Number(rows[0]?.count ?? 0),
+  };
+}
+
+// Alvos para compartilhar/encaminhar (grupos do usuário + canais de clientes).
+export async function listShareTargets(
+  userId: string
+): Promise<{ id: string; label: string }[]> {
+  const groups = await query<{ id: string; name: string }>(
+    `SELECT c.id, c.name FROM conversations c
+     JOIN conversation_members m ON m.conversation_id = c.id
+     WHERE c.type = 'GROUP' AND m.user_id = $1 ORDER BY c.name`,
+    [userId]
+  );
+  const clients = await query<{ id: string; name: string }>(
+    `SELECT c.id, cl.name FROM conversations c
+     JOIN clients cl ON cl.id = c.client_id
+     WHERE c.type = 'CLIENT' ORDER BY cl.name`
+  );
+  return [
+    ...groups.map((g) => ({ id: g.id, label: `👪 ${g.name}` })),
+    ...clients.map((c) => ({ id: c.id, label: `🏢 ${c.name}` })),
+  ];
+}
+
+export async function hasRated(
+  conversationId: string,
+  raterId: string
+): Promise<boolean> {
+  const r = await query(
+    `SELECT 1 FROM conversation_ratings WHERE conversation_id = $1 AND rater_id = $2`,
+    [conversationId, raterId]
+  );
+  return r.length > 0;
 }
 
 export async function canAccessConversation(

@@ -195,4 +195,28 @@ CREATE TABLE IF NOT EXISTS messages (
   body text NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now()
 );
+
+-- Torpedo v2
+ALTER TABLE users ADD COLUMN IF NOT EXISTS presence text NOT NULL DEFAULT 'Disponível';
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_url text;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_name text;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS forwarded_from text;
+ALTER TABLE conversations ADD COLUMN IF NOT EXISTS started_by text REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE conversations ADD COLUMN IF NOT EXISTS finalized_at timestamptz;
+
+CREATE TABLE IF NOT EXISTS message_reactions (
+  message_id text NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+  user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  emoji text NOT NULL,
+  PRIMARY KEY (message_id, user_id, emoji)
+);
+
+CREATE TABLE IF NOT EXISTS conversation_ratings (
+  id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  conversation_id text NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  rated_user_id text REFERENCES users(id) ON DELETE CASCADE,
+  rater_id text REFERENCES users(id) ON DELETE SET NULL,
+  score integer NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
 `;
