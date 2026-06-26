@@ -6,6 +6,15 @@ Sistema de **gestão de tarefas e comunicação interna** da **Azul Administrado
 
 ## Status
 
+**Fase 3 — Modelos, Lotes e Agendamentos** (concluída):
+
+- **Modelos de tarefa** pré-cadastrados, com tipo, responsável padrão, prazo (em dias),
+  tags, cliente e **etapas/procedimentos** (que viram subtarefas ao instanciar).
+- **Lotes**: agrupam vários modelos e criam todas as tarefas de uma vez.
+- **Agendamentos** recorrentes (diária/semanal/mensal/anual, com intervalo, data de
+  início/fim e hora). As tarefas são geradas automaticamente quando vencem (geração
+  "preguiçosa" ao acessar o sistema, sem necessidade de worker externo).
+
 **Fase 2 — Usuários e Permissões** (concluída): login real (e-mail/senha com hash),
 sessão por cookie assinado, **perfis de acesso** com permissões cadastráveis,
 **grupos de acesso** (membros + perfis concedidos) e cadastros de **Clientes** e
@@ -91,7 +100,7 @@ Ver seção 9 da [minuta](./MINUTA_ENTENDIMENTO.md). Resumo:
 
 0. **Setup** — estrutura, CI/CD, paleta, tela inicial ✅
 1. **Núcleo de Tarefas** — cadastro completo + Kanban/Lista ✅
-2. **Usuários e Permissões** — login, perfis, grupos, clientes, projetos ✅ (atual)
-3. **Modelos e Agendamentos** — templates, lotes e recorrências
+2. **Usuários e Permissões** — login, perfis, grupos, clientes, projetos ✅
+3. **Modelos e Agendamentos** — templates, lotes e recorrências ✅ (atual)
 4. **Comunicação Interna** — chat 1‑1, grupos e canais por cliente
 5. **Refinos** — notificações, relatórios, UX

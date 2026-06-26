@@ -123,4 +123,52 @@ CREATE TABLE IF NOT EXISTS task_completions (
 
 -- A coluna "Em Revisão" foi substituída por "Marcação de Tarefa - MD".
 UPDATE tasks SET status = 'EM_ANDAMENTO' WHERE status = 'EM_REVISAO';
+
+-- Fase 3: modelos de tarefa, lotes e agendamentos
+CREATE TABLE IF NOT EXISTS task_templates (
+  id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  name text NOT NULL,
+  type text NOT NULL DEFAULT 'PADRAO',
+  description text,
+  responsavel text,
+  due_days integer,
+  tags text,
+  client_id text REFERENCES clients(id) ON DELETE SET NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS template_steps (
+  id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  template_id text NOT NULL REFERENCES task_templates(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  "order" integer NOT NULL DEFAULT 0,
+  sequential boolean NOT NULL DEFAULT false
+);
+
+CREATE TABLE IF NOT EXISTS task_batches (
+  id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  name text NOT NULL,
+  description text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS batch_templates (
+  batch_id text NOT NULL REFERENCES task_batches(id) ON DELETE CASCADE,
+  template_id text NOT NULL REFERENCES task_templates(id) ON DELETE CASCADE,
+  PRIMARY KEY (batch_id, template_id)
+);
+
+CREATE TABLE IF NOT EXISTS task_schedules (
+  id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  template_id text NOT NULL REFERENCES task_templates(id) ON DELETE CASCADE,
+  owner_id text REFERENCES users(id) ON DELETE SET NULL,
+  frequency text NOT NULL DEFAULT 'MENSAL', -- DIARIA | SEMANAL | MENSAL | ANUAL
+  every integer NOT NULL DEFAULT 1,
+  start_date date NOT NULL,
+  end_date date,
+  run_time text NOT NULL DEFAULT '08:00',
+  next_run timestamptz NOT NULL,
+  active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
 `;

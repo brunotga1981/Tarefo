@@ -7,6 +7,11 @@ export const PERMISSIONS = [
     label: "Ver todas as tarefas (não só as suas)",
     group: "Tarefas",
   },
+  {
+    key: "templates.manage",
+    label: "Gerenciar modelos, lotes e agendamentos",
+    group: "Tarefas",
+  },
   { key: "clients.view", label: "Ver clientes", group: "Clientes" },
   { key: "clients.manage", label: "Gerenciar clientes", group: "Clientes" },
   { key: "projects.view", label: "Ver projetos", group: "Projetos" },

@@ -75,6 +75,7 @@ async function seedAccess() {
   for (const key of [
     "tasks.view",
     "tasks.manage",
+    "templates.manage",
     "clients.view",
     "clients.manage",
     "projects.view",
@@ -191,4 +192,46 @@ async function seedTasks() {
       [t0, cmt.rows[0].id, atendimento]
     );
   }
+
+  // Modelos de tarefa de exemplo (com etapas/procedimentos)
+  const tmpl1 = await pool.query<{ id: string }>(
+    `INSERT INTO task_templates (name, type, description, responsavel, due_days, tags, client_id)
+     VALUES ('Prestação de contas mensal', 'PRIORIDADE_MAXIMA',
+       'Fechamento e aprovação da prestação de contas do mês.', 'Financeiro', 5,
+       'financeiro,mensal', $1) RETURNING id`,
+    [c0]
+  );
+  const t1 = tmpl1.rows[0].id;
+  await pool.query(
+    `INSERT INTO template_steps (template_id, name, "order", sequential) VALUES
+      ($1,'Conferir lançamentos',0,true),
+      ($1,'Gerar relatório',1,true),
+      ($1,'Aprovar e publicar',2,true)`,
+    [t1]
+  );
+
+  const tmpl2 = await pool.query<{ id: string }>(
+    `INSERT INTO task_templates (name, type, description, responsavel, due_days, tags)
+     VALUES ('Convocação de assembleia', 'URGENTE',
+       'Organizar e convocar assembleia de moradores.', 'Atendimento', 10, 'assembleia')
+     RETURNING id`
+  );
+  const t2 = tmpl2.rows[0].id;
+  await pool.query(
+    `INSERT INTO template_steps (template_id, name, "order", sequential) VALUES
+      ($1,'Definir pauta e data',0,false),
+      ($1,'Enviar convocação',1,false)`,
+    [t2]
+  );
+
+  // Lote de exemplo agrupando os dois modelos
+  const batch = await pool.query<{ id: string }>(
+    `INSERT INTO task_batches (name, description)
+     VALUES ('Rotina mensal do condomínio', 'Tarefas recorrentes de todo mês.')
+     RETURNING id`
+  );
+  await pool.query(
+    `INSERT INTO batch_templates (batch_id, template_id) VALUES ($1,$2),($1,$3)`,
+    [batch.rows[0].id, t1, t2]
+  );
 }
