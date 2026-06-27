@@ -13,10 +13,12 @@ import {
   MATERIAL_LABEL,
   MATERIAL_ICON,
   PASS_SCORE,
+  embedUrl,
 } from "@/lib/lms";
 import { formatDateTime } from "@/lib/format";
 import { Tabs } from "@/components/tarefo/Tabs";
 import { ResetForm } from "@/components/tarefo/ResetForm";
+import { AiQuizForm } from "@/components/AiQuizForm";
 import {
   addMaterialAction,
   deleteMaterialAction,
@@ -54,33 +56,48 @@ export default async function CourseDetailPage({
       {materials.length === 0 && (
         <p className="text-xs text-slate-400">Nenhum material cadastrado.</p>
       )}
-      {materials.map((m) => (
-        <div
-          key={m.id}
-          className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-3 py-2"
-        >
-          <a
-            href={m.url}
-            target="_blank"
-            className="flex items-center gap-2 text-sm text-azul hover:underline"
+      {materials.map((m) => {
+        const embed = m.kind === "VIDEO" ? embedUrl(m.url) : null;
+        return (
+          <div
+            key={m.id}
+            className="rounded-lg border border-slate-100 bg-slate-50 p-3"
           >
-            <span>{MATERIAL_ICON[m.kind]}</span>
-            {m.title}
-            <span className="text-[10px] text-slate-400">
-              ({MATERIAL_LABEL[m.kind]})
-            </span>
-          </a>
-          {canManage && (
-            <form action={deleteMaterialAction}>
-              <input type="hidden" name="id" value={m.id} />
-              <input type="hidden" name="training_id" value={course.id} />
-              <button className="text-[11px] text-slate-400 hover:text-red-500">
-                remover
-              </button>
-            </form>
-          )}
-        </div>
-      ))}
+            <div className="flex items-center justify-between">
+              <a
+                href={m.url}
+                target="_blank"
+                className="flex items-center gap-2 text-sm text-azul hover:underline"
+              >
+                <span>{MATERIAL_ICON[m.kind]}</span>
+                {m.title}
+                <span className="text-[10px] text-slate-400">
+                  ({MATERIAL_LABEL[m.kind]})
+                </span>
+              </a>
+              {canManage && (
+                <form action={deleteMaterialAction}>
+                  <input type="hidden" name="id" value={m.id} />
+                  <input type="hidden" name="training_id" value={course.id} />
+                  <button className="text-[11px] text-slate-400 hover:text-red-500">
+                    remover
+                  </button>
+                </form>
+              )}
+            </div>
+            {embed && (
+              <div className="mt-2 aspect-video w-full overflow-hidden rounded-lg">
+                <iframe
+                  src={embed}
+                  className="h-full w-full"
+                  allowFullScreen
+                  title={m.title}
+                />
+              </div>
+            )}
+          </div>
+        );
+      })}
 
       {canManage && (
         <ResetForm
@@ -153,6 +170,10 @@ export default async function CourseDetailPage({
       {/* Gestão do quiz */}
       {canManage && (
         <div className="mt-6 border-t border-slate-100 pt-4">
+          <div className="mb-4">
+            <AiQuizForm trainingId={course.id} />
+          </div>
+
           <h4 className="mb-2 text-xs font-semibold uppercase text-slate-400">
             Questões cadastradas
           </h4>

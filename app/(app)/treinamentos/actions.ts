@@ -6,6 +6,9 @@ import { query } from "@/lib/db";
 import { getCurrentUser, can } from "@/lib/auth";
 import { saveUpload } from "@/lib/upload";
 import { PASS_SCORE } from "@/lib/lms";
+import { generateQuizWithAI } from "@/lib/ai";
+
+export type AiQuizState = { error?: string; created?: number };
 
 async function requireManage() {
   const user = await getCurrentUser();
@@ -109,6 +112,55 @@ export async function deleteQuestionAction(fd: FormData) {
   revalidatePath(`/treinamentos/${trainingId}`);
 }
 
+// ---- Gerar quiz com IA ----
+export async function generateQuizAction(
+  _prev: AiQuizState,
+  fd: FormData
+): Promise<AiQuizState> {
+  await requireManage();
+  const trainingId = str(fd, "training_id");
+  const num = Math.max(1, Math.min(20, Number(str(fd, "num")) || 5));
+  const difficulty = str(fd, "difficulty") || "Médio";
+  if (!trainingId) return { error: "Curso inválido." };
+
+  // Monta o conteúdo do treinamento para a IA ler
+  const course = await query<{ title: string; description: string | null }>(
+    `SELECT title, description FROM trainings WHERE id=$1`,
+    [trainingId]
+  );
+  const materials = await query<{ title: string }>(
+    `SELECT title FROM training_materials WHERE training_id=$1 ORDER BY "order"`,
+    [trainingId]
+  );
+  const content =
+    `Título: ${course[0]?.title ?? ""}\n` +
+    `Descrição: ${course[0]?.description ?? ""}\n` +
+    `Materiais: ${materials.map((m) => m.title).join("; ")}`;
+
+  try {
+    const questions = await generateQuizWithAI(content, num, difficulty);
+    for (const q of questions) {
+      const inserted = await query<{ id: string }>(
+        `INSERT INTO training_questions (training_id, prompt, "order")
+         VALUES ($1,$2,COALESCE((SELECT max("order")+1 FROM training_questions WHERE training_id=$1),0))
+         RETURNING id`,
+        [trainingId, q.prompt]
+      );
+      for (let i = 0; i < q.options.length; i++) {
+        await query(
+          `INSERT INTO training_options (question_id, text, is_correct, "order")
+           VALUES ($1,$2,$3,$4)`,
+          [inserted[0].id, q.options[i], i === q.correct, i]
+        );
+      }
+    }
+    revalidatePath(`/treinamentos/${trainingId}`);
+    return { created: questions.length };
+  } catch (e: any) {
+    return { error: e?.message ?? "Falha ao gerar o quiz com IA." };
+  }
+}
+
 // ---- Submeter quiz ----
 export async function submitQuizAction(fd: FormData) {
   const user = await getCurrentUser();
@@ -137,6 +189,13 @@ export async function submitQuizAction(fd: FormData) {
   const score = Math.round((hits / questions.length) * 100);
   const passed = score >= PASS_SCORE;
 
+  // Já estava aprovado antes? (para postar a notícia apenas na 1ª aprovação)
+  const prev = await query<{ passed: boolean }>(
+    `SELECT passed FROM training_completions WHERE training_id=$1 AND user_id=$2`,
+    [trainingId, user.id]
+  );
+  const wasPassed = prev[0]?.passed ?? false;
+
   await query(
     `INSERT INTO training_completions (training_id, user_id, score, passed, completed_at)
      VALUES ($1,$2,$3,$4,now())
@@ -145,6 +204,26 @@ export async function submitQuizAction(fd: FormData) {
        passed=(training_completions.passed OR EXCLUDED.passed), completed_at=now()`,
     [trainingId, user.id, score, passed]
   );
+
+  // Primeira aprovação: publica notícia na Intranet (Conheça Mais)
+  if (passed && !wasPassed) {
+    const course = await query<{ title: string }>(
+      `SELECT title FROM trainings WHERE id=$1`,
+      [trainingId]
+    );
+    const title = course[0]?.title ?? "treinamento";
+    await query(
+      `INSERT INTO blog_posts (title, theme, summary, content) VALUES ($1,$2,$3,$4)`,
+      [
+        `${user.name} agora é especialista em ${title}`,
+        "Conquistas",
+        `${user.name} concluiu o treinamento “${title}” com ${score}% de aproveitamento e tornou-se especialista no assunto. Parabéns! 🎉`,
+        `Parabenizamos ${user.name} pela conclusão do treinamento “${title}” com ${score}% de aproveitamento, tornando-se especialista no assunto. 🎓`,
+      ]
+    );
+    revalidatePath("/intranet/conheca-mais");
+  }
+
   revalidatePath("/treinamentos");
   redirect(`/treinamentos/${trainingId}/quiz?score=${score}`);
 }

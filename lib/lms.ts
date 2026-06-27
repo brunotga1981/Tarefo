@@ -18,6 +18,27 @@ export const MATERIAL_ICON: Record<string, string> = {
 
 export const PASS_SCORE = 70;
 
+// Converte URLs de YouTube/Vimeo em URL de player incorporado (embed).
+export function embedUrl(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes("youtube.com")) {
+      const v = u.searchParams.get("v");
+      if (v) return `https://www.youtube.com/embed/${v}`;
+    }
+    if (u.hostname === "youtu.be") {
+      return `https://www.youtube.com/embed${u.pathname}`;
+    }
+    if (u.hostname.includes("vimeo.com")) {
+      const id = u.pathname.split("/").filter(Boolean)[0];
+      if (id) return `https://player.vimeo.com/video/${id}`;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 export type Course = {
   id: string;
   title: string;
@@ -192,7 +213,8 @@ export async function getRanking(): Promise<RankRow[]> {
   return rows
     .map((r) => {
       const percent = total > 0 ? Math.round((r.done / total) * 100) : 0;
-      const participation = r.questions * 2 + r.answers * 3;
+      // Participação: perguntas (+2), respostas (+3) e bônus por curso aprovado (+5)
+      const participation = r.questions * 2 + r.answers * 3 + r.done * 5;
       return {
         ...r,
         total,

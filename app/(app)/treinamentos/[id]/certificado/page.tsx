@@ -50,9 +50,13 @@ export default async function CertificadoPage({
       {/* Certificado */}
       <div className="relative overflow-hidden rounded-2xl border-4 border-azul-navy bg-white p-10 text-center shadow-lg">
         <div className="absolute inset-0 border-8 border-azul-suave/20" />
-        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-azul">
-          Azul Administradora · Tarefo
-        </p>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <div className="flex items-center justify-center gap-8">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-azul.png" alt="Azul Administradora" className="h-16 w-auto" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-tga.png" alt="TGA Empreendimentos" className="h-12 w-auto" />
+        </div>
         <h1 className="mt-6 text-3xl font-bold text-azul-navy">
           Certificado de Conclusão
         </h1>
