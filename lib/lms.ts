@@ -45,7 +45,12 @@ export type Course = {
   theme: string | null;
   subtheme: string | null;
   description: string | null;
+  content: string | null;
   image_url: string | null;
+  mandatory: boolean;
+  group_id: string | null;
+  group_name?: string | null;
+  deadline: string | null;
   material_count?: number;
   question_count?: number;
   my_passed?: boolean;
@@ -69,12 +74,14 @@ export type Question = {
 
 export async function listCourses(userId: string): Promise<Course[]> {
   return query<Course>(
-    `SELECT t.id, t.title, t.theme, t.subtheme, t.description, t.image_url,
+    `SELECT t.id, t.title, t.theme, t.subtheme, t.description, t.content, t.image_url,
+       t.mandatory, t.group_id, t.deadline, g.name AS group_name,
        (SELECT count(*)::int FROM training_materials m WHERE m.training_id=t.id) AS material_count,
        (SELECT count(*)::int FROM training_questions q WHERE q.training_id=t.id) AS question_count,
        COALESCE((SELECT passed FROM training_completions c WHERE c.training_id=t.id AND c.user_id=$1), false) AS my_passed,
        (SELECT score FROM training_completions c WHERE c.training_id=t.id AND c.user_id=$1) AS my_score
      FROM trainings t
+     LEFT JOIN groups g ON g.id = t.group_id
      ORDER BY t.theme NULLS LAST, t.subtheme NULLS LAST, t.title`,
     [userId]
   );
@@ -82,7 +89,10 @@ export async function listCourses(userId: string): Promise<Course[]> {
 
 export async function getCourse(id: string): Promise<Course | null> {
   const rows = await query<Course>(
-    `SELECT id, title, theme, subtheme, description, image_url FROM trainings WHERE id=$1`,
+    `SELECT t.id, t.title, t.theme, t.subtheme, t.description, t.content, t.image_url,
+       t.mandatory, t.group_id, t.deadline, g.name AS group_name
+     FROM trainings t LEFT JOIN groups g ON g.id = t.group_id
+     WHERE t.id=$1`,
     [id]
   );
   return rows[0] ?? null;
@@ -172,8 +182,11 @@ export type RankRow = {
   avg_score: number | null;
   questions: number;
   answers: number;
+  overdue: number;
   participation: number;
 };
+
+export const OVERDUE_PENALTY = 15;
 
 export function tierOf(percent: number): string {
   if (percent < 51) return "Bronze";
@@ -201,20 +214,29 @@ export async function getRanking(): Promise<RankRow[]> {
     avg_score: number | null;
     questions: number;
     answers: number;
+    overdue: number;
   }>(
     `SELECT u.id, u.name,
        (SELECT count(*)::int FROM training_completions c WHERE c.user_id=u.id AND c.passed) AS done,
        (SELECT round(avg(score))::int FROM training_completions c WHERE c.user_id=u.id) AS avg_score,
        (SELECT count(*)::int FROM training_forum f WHERE f.user_id=u.id AND f.parent_id IS NULL) AS questions,
-       (SELECT count(*)::int FROM training_forum f WHERE f.user_id=u.id AND f.parent_id IS NOT NULL) AS answers
+       (SELECT count(*)::int FROM training_forum f WHERE f.user_id=u.id AND f.parent_id IS NOT NULL) AS answers,
+       (SELECT count(*)::int FROM trainings t
+          JOIN group_members gm ON gm.group_id=t.group_id AND gm.user_id=u.id
+          WHERE t.mandatory AND t.deadline IS NOT NULL AND t.deadline < now()::date
+            AND NOT EXISTS (SELECT 1 FROM training_completions c
+                            WHERE c.training_id=t.id AND c.user_id=u.id AND c.passed)
+       ) AS overdue
      FROM users u`
   );
 
   return rows
     .map((r) => {
       const percent = total > 0 ? Math.round((r.done / total) * 100) : 0;
-      // Participação: perguntas (+2), respostas (+3) e bônus por curso aprovado (+5)
-      const participation = r.questions * 2 + r.answers * 3 + r.done * 5;
+      // Participação: perguntas (+2), respostas (+3), bônus por curso aprovado (+5)
+      // e penalidade por curso obrigatório vencido (-15)
+      const participation =
+        r.questions * 2 + r.answers * 3 + r.done * 5 - r.overdue * OVERDUE_PENALTY;
       return {
         ...r,
         total,

@@ -6,9 +6,10 @@ import { query } from "@/lib/db";
 import { getCurrentUser, can } from "@/lib/auth";
 import { saveUpload } from "@/lib/upload";
 import { PASS_SCORE } from "@/lib/lms";
-import { generateQuizWithAI } from "@/lib/ai";
+import { generateQuizWithAI, generateCourseContent } from "@/lib/ai";
 
 export type AiQuizState = { error?: string; created?: number };
+export type AiContentState = { error?: string; ok?: boolean };
 
 async function requireManage() {
   const user = await getCurrentUser();
@@ -30,14 +31,17 @@ export async function createCourseAction(fd: FormData) {
     imageUrl = (await saveUpload(file, "curso")).url;
   }
   const rows = await query<{ id: string }>(
-    `INSERT INTO trainings (title, theme, subtheme, description, image_url)
-     VALUES ($1,$2,$3,$4,$5) RETURNING id`,
+    `INSERT INTO trainings (title, theme, subtheme, description, image_url, mandatory, group_id, deadline)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
     [
       title,
       str(fd, "theme") || null,
       str(fd, "subtheme") || null,
       str(fd, "description") || null,
       imageUrl,
+      fd.get("mandatory") === "on",
+      str(fd, "group_id") || null,
+      str(fd, "deadline") || null,
     ]
   );
   revalidatePath("/treinamentos");
@@ -110,6 +114,66 @@ export async function deleteQuestionAction(fd: FormData) {
   const trainingId = str(fd, "training_id");
   await query(`DELETE FROM training_questions WHERE id=$1`, [str(fd, "id")]);
   revalidatePath(`/treinamentos/${trainingId}`);
+}
+
+// ---- Gerar conteúdo do curso com IA (com anexos de apoio) ----
+export async function generateContentAction(
+  _prev: AiContentState,
+  fd: FormData
+): Promise<AiContentState> {
+  await requireManage();
+  const trainingId = str(fd, "training_id");
+  if (!trainingId) return { error: "Curso inválido." };
+  const difficulty = str(fd, "difficulty") || "Médio";
+
+  const course = await query<{ title: string; description: string | null }>(
+    `SELECT title, description FROM trainings WHERE id=$1`,
+    [trainingId]
+  );
+
+  // Referência: texto colado + arquivos anexos (texto é lido; demais entram como material)
+  let reference = str(fd, "reference");
+  const files = fd.getAll("attachments").filter((f) => f instanceof File) as File[];
+  for (const file of files) {
+    if (file.size === 0) continue;
+    const saved = await saveUpload(file, "ref");
+    // anexo também vira material do curso
+    await query(
+      `INSERT INTO training_materials (training_id, kind, title, url, "order")
+       VALUES ($1,$2,$3,$4,COALESCE((SELECT max("order")+1 FROM training_materials WHERE training_id=$1),0))`,
+      [trainingId, "OUTRO", file.name, saved.url]
+    );
+    // se for texto, agrega ao material de referência da IA
+    if (file.type.startsWith("text/")) {
+      try {
+        reference += "\n\n" + (await file.text());
+      } catch {
+        /* ignora */
+      }
+    } else {
+      reference += `\n\n[Anexo: ${file.name}]`;
+    }
+  }
+  if (course[0]?.description) reference += `\n\nDescrição: ${course[0].description}`;
+  if (!reference.trim()) {
+    return { error: "Forneça um texto de referência ou anexos para a IA." };
+  }
+
+  try {
+    const content = await generateCourseContent(
+      course[0]?.title ?? "Curso",
+      reference,
+      difficulty
+    );
+    await query(`UPDATE trainings SET content=$2 WHERE id=$1`, [
+      trainingId,
+      content,
+    ]);
+    revalidatePath(`/treinamentos/${trainingId}`);
+    return { ok: true };
+  } catch (e: any) {
+    return { error: e?.message ?? "Falha ao gerar o conteúdo com IA." };
+  }
 }
 
 // ---- Gerar quiz com IA ----

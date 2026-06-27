@@ -11,6 +11,50 @@ export function aiEnabled(): boolean {
   return !!process.env.ANTHROPIC_API_KEY;
 }
 
+async function callClaude(prompt: string, maxTokens = 2000): Promise<string> {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) {
+    throw new Error(
+      "IA não configurada. Defina ANTHROPIC_API_KEY para usar os recursos de IA."
+    );
+  }
+  const model = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
+  const base = process.env.ANTHROPIC_API_URL || "https://api.anthropic.com";
+  const res = await fetch(`${base}/v1/messages`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": key,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: maxTokens,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+  if (!res.ok) throw new Error(`Falha ao chamar a IA (HTTP ${res.status}).`);
+  const data = await res.json();
+  return data?.content?.[0]?.text ?? "";
+}
+
+// Elabora o conteúdo do curso a partir de um material de referência (e anexos).
+export async function generateCourseContent(
+  title: string,
+  reference: string,
+  difficulty: string
+): Promise<string> {
+  const prompt =
+    `Você é um instrutor. Elabore o CONTEÚDO DIDÁTICO de um curso interno em português do Brasil, ` +
+    `bem estruturado (introdução, tópicos com explicações e conclusão), nível ${difficulty}. ` +
+    `Título do curso: "${title}".\n\n` +
+    `Use o material de referência a seguir (anexos/observações) como base:\n${reference}\n\n` +
+    `Responda apenas com o conteúdo do curso em texto (pode usar títulos e listas).`;
+  const text = await callClaude(prompt, 3000);
+  if (!text.trim()) throw new Error("A IA não retornou conteúdo.");
+  return text.trim();
+}
+
 export async function generateQuizWithAI(
   content: string,
   numQuestions: number,

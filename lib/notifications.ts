@@ -5,6 +5,7 @@ export type Notifications = {
   canal: number; // mensagens não lidas em canais de cliente (seguidos)
   tarefa: number; // novas tarefas atribuídas a você desde a última visita ao quadro
   mt: number; // Marcações de Tarefas (MT) pendentes
+  treino: number; // treinamentos disponíveis ainda não aprovados
 };
 
 export async function getNotifications(userId: string): Promise<Notifications> {
@@ -47,11 +48,22 @@ export async function getNotifications(userId: string): Promise<Notifications> {
     [userId]
   );
 
+  // Treinamentos disponíveis ainda não aprovados pelo usuário (some quando aprova).
+  const treino = await query<{ count: number }>(
+    `SELECT count(*)::int AS count FROM trainings t
+     WHERE NOT EXISTS (
+       SELECT 1 FROM training_completions c
+       WHERE c.training_id = t.id AND c.user_id = $1 AND c.passed
+     )`,
+    [userId]
+  );
+
   return {
     torpedo: torpedo[0]?.count ?? 0,
     canal: canal[0]?.count ?? 0,
     tarefa: tarefa[0]?.count ?? 0,
     mt: mt[0]?.count ?? 0,
+    treino: treino[0]?.count ?? 0,
   };
 }
 

@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { getCurrentUser, can } from "@/lib/auth";
+import { query } from "@/lib/db";
 import { listCourses, getRanking, TIER_STYLE, type Course } from "@/lib/lms";
 import { createCourseAction } from "./actions";
 
@@ -12,9 +13,12 @@ const field =
 export default async function TreinamentosPage() {
   const user = await getCurrentUser();
   const canManage = can(user, "trainings.manage");
-  const [courses, ranking] = await Promise.all([
+  const [courses, ranking, groups] = await Promise.all([
     listCourses(user!.id),
     getRanking(),
+    canManage
+      ? query<{ id: string; name: string }>(`SELECT id, name FROM groups ORDER BY name`)
+      : Promise.resolve([] as { id: string; name: string }[]),
   ]);
   const me = ranking.find((r) => r.id === user!.id);
 
@@ -120,6 +124,21 @@ export default async function TreinamentosPage() {
               <input name="subtheme" placeholder="Subtema" className={field} />
               <textarea name="description" rows={2} placeholder="Descrição" className={field} />
               <input name="image_url" placeholder="URL de imagem (opcional)" className={field} />
+              <label className="flex items-center gap-2 text-xs text-slate-600">
+                <input type="checkbox" name="mandatory" /> Curso obrigatório
+              </label>
+              <select name="group_id" className={field} defaultValue="">
+                <option value="">Equipe obrigada (se obrigatório)…</option>
+                {groups.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ))}
+              </select>
+              <label className="block text-xs text-slate-500">
+                Prazo para concluir (se obrigatório)
+                <input type="date" name="deadline" className={`${field} mt-1`} />
+              </label>
               <button className="w-full rounded-lg bg-azul-navy px-3 py-2 text-sm font-semibold text-white hover:bg-azul">
                 Criar e configurar
               </button>

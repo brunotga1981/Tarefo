@@ -236,6 +236,10 @@ CREATE TABLE IF NOT EXISTS trainings (
 ALTER TABLE trainings ADD COLUMN IF NOT EXISTS theme text;
 ALTER TABLE trainings ADD COLUMN IF NOT EXISTS subtheme text;
 ALTER TABLE trainings ADD COLUMN IF NOT EXISTS image_url text;
+ALTER TABLE trainings ADD COLUMN IF NOT EXISTS content text;
+ALTER TABLE trainings ADD COLUMN IF NOT EXISTS mandatory boolean NOT NULL DEFAULT false;
+ALTER TABLE trainings ADD COLUMN IF NOT EXISTS group_id text REFERENCES groups(id) ON DELETE SET NULL;
+ALTER TABLE trainings ADD COLUMN IF NOT EXISTS deadline date;
 
 -- Materiais do curso (vídeo, PDF, PPT, link...)
 CREATE TABLE IF NOT EXISTS training_materials (

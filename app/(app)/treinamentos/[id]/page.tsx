@@ -19,6 +19,8 @@ import { formatDateTime } from "@/lib/format";
 import { Tabs } from "@/components/tarefo/Tabs";
 import { ResetForm } from "@/components/tarefo/ResetForm";
 import { AiQuizForm } from "@/components/AiQuizForm";
+import { AiContentForm } from "@/components/AiContentForm";
+import { formatDate } from "@/lib/format";
 import {
   addMaterialAction,
   deleteMaterialAction,
@@ -53,6 +55,17 @@ export default async function CourseDetailPage({
   // ---- Aba Conteúdo ----
   const conteudo = (
     <div className="space-y-2">
+      {course.content && (
+        <div className="mb-3 rounded-lg border border-slate-100 bg-white p-4">
+          <h4 className="mb-1 text-xs font-semibold uppercase text-slate-400">
+            Conteúdo do curso
+          </h4>
+          <div className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
+            {course.content}
+          </div>
+        </div>
+      )}
+      {canManage && <AiContentForm trainingId={course.id} />}
       {materials.length === 0 && (
         <p className="text-xs text-slate-400">Nenhum material cadastrado.</p>
       )}
@@ -324,6 +337,16 @@ export default async function CourseDetailPage({
           {course.subtheme && (
             <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">
               {course.subtheme}
+            </span>
+          )}
+          {course.mandatory && (
+            <span className="rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700">
+              Obrigatório{course.group_name ? ` · ${course.group_name}` : ""}
+            </span>
+          )}
+          {course.mandatory && course.deadline && (
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] text-amber-700">
+              Prazo: {formatDate(course.deadline)}
             </span>
           )}
         </div>
