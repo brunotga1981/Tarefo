@@ -222,6 +222,16 @@ CREATE TABLE IF NOT EXISTS conversation_ratings (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- Treinamentos (materiais/cursos internos)
+CREATE TABLE IF NOT EXISTS trainings (
+  id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  title text NOT NULL,
+  category text,
+  description text,
+  url text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
 -- Controle de leitura das conversas (para alertas de mensagens novas)
 CREATE TABLE IF NOT EXISTS conversation_reads (
   conversation_id text NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,

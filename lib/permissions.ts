@@ -22,6 +22,11 @@ export const PERMISSIONS = [
     label: "Gerenciar perfis e grupos",
     group: "Administração",
   },
+  {
+    key: "trainings.manage",
+    label: "Gerenciar treinamentos",
+    group: "Administração",
+  },
 ] as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[number]["key"];

@@ -81,6 +81,7 @@ async function seedAccess() {
     "projects.view",
     "projects.manage",
     "users.manage",
+    "trainings.manage",
   ]) {
     await pool.query(
       `INSERT INTO profile_permissions (profile_id, permission) VALUES ($1,$2)`,
@@ -117,6 +118,15 @@ async function seedAccess() {
     `INSERT INTO group_members (group_id, user_id)
      SELECT $1, id FROM users WHERE email = 'atendimento@azuladministradora.com.br'`,
     [grupoId]
+  );
+
+  // Treinamentos de exemplo
+  await pool.query(
+    `INSERT INTO trainings (title, category, description, url) VALUES
+      ('Primeiros passos no Tarefo', 'Onboarding',
+       'Visão geral do sistema: tarefas, Torpedo e R.A.C.', ''),
+      ('Boas práticas de atendimento', 'Atendimento',
+       'Como conduzir um atendimento promotor e registrar a evolução.', '')`
   );
 }
 
