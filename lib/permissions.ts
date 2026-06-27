@@ -32,6 +32,11 @@ export const PERMISSIONS = [
     label: "Gerenciar conteúdo da Intranet (Conheça Mais)",
     group: "Administração",
   },
+  {
+    key: "timeline.post",
+    label: "Publicar na Time Line",
+    group: "Intranet",
+  },
 ] as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[number]["key"];

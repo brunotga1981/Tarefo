@@ -276,16 +276,19 @@ export async function submitQuizAction(fd: FormData) {
       [trainingId]
     );
     const title = course[0]?.title ?? "treinamento";
+    // Replica o certificado na Time Line da Intranet
     await query(
-      `INSERT INTO blog_posts (title, theme, summary, content) VALUES ($1,$2,$3,$4)`,
+      `INSERT INTO timeline_posts (kind, author_id, author_name, course_id, score, body)
+       VALUES ('CERTIFICATE',$1,$2,$3,$4,$5)`,
       [
-        `${user.name} agora é especialista em ${title}`,
-        "Conquistas",
-        `${user.name} concluiu o treinamento “${title}” com ${score}% de aproveitamento e tornou-se especialista no assunto. Parabéns! 🎉`,
-        `Parabenizamos ${user.name} pela conclusão do treinamento “${title}” com ${score}% de aproveitamento, tornando-se especialista no assunto. 🎓`,
+        user.id,
+        user.name,
+        trainingId,
+        score,
+        `🎓 Concluí o treinamento “${title}” e me tornei especialista no assunto!`,
       ]
     );
-    revalidatePath("/intranet/conheca-mais");
+    revalidatePath("/intranet/timeline");
   }
 
   revalidatePath("/treinamentos");

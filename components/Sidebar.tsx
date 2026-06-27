@@ -42,6 +42,7 @@ const INTRANET: NavGroup = {
   label: "Intranet",
   icon: "🌐",
   children: [
+    { label: "Time Line", href: "/intranet/timeline" },
     { label: "Conheça Mais", href: "/intranet/conheca-mais" },
     { label: "Calendário", href: "/intranet/calendario" },
     { label: "Contatos", href: "/intranet/contatos" },

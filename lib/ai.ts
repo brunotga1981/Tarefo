@@ -38,6 +38,26 @@ async function callClaude(prompt: string, maxTokens = 2000): Promise<string> {
   return data?.content?.[0]?.text ?? "";
 }
 
+// Copywriting do post da Time Line a partir de um tema/observações.
+export async function generatePostCopy(topic: string): Promise<string> {
+  const prompt =
+    `Escreva um texto curto e envolvente (estilo post de rede social interna, em ` +
+    `português do Brasil, com 2 a 4 frases e poucos emojis) sobre o seguinte tema/observações:\n` +
+    `${topic}\n\nResponda apenas com o texto do post.`;
+  const text = await callClaude(prompt, 600);
+  if (!text.trim()) throw new Error("A IA não retornou texto.");
+  return text.trim();
+}
+
+// Geração de imagem por IA (requer provedor de imagem configurado).
+export async function generatePostImage(_prompt: string): Promise<string> {
+  // A API da Claude não gera imagens. Integração com um provedor de imagens
+  // (ex.: OpenAI Images / Stability) pode ser plugada aqui via env dedicada.
+  throw new Error(
+    "Geração de imagem por IA ainda não configurada (requer chave de um provedor de imagens). Envie uma imagem ou informe uma URL."
+  );
+}
+
 // Elabora o conteúdo do curso a partir de um material de referência (e anexos).
 export async function generateCourseContent(
   title: string,

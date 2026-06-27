@@ -22,7 +22,7 @@ export async function loginAction(
   }
 
   createSession(userId);
-  redirect("/meu-tarefo");
+  redirect("/intranet/timeline");
 }
 
 export async function logoutAction() {

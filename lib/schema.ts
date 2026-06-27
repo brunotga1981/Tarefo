@@ -287,6 +287,33 @@ CREATE TABLE IF NOT EXISTS training_forum (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- Time Line (feed estilo Instagram da Intranet)
+CREATE TABLE IF NOT EXISTS timeline_posts (
+  id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  kind text NOT NULL DEFAULT 'POST', -- POST | CERTIFICATE
+  author_id text REFERENCES users(id) ON DELETE SET NULL,
+  author_name text NOT NULL,
+  body text,
+  image_url text,
+  course_id text REFERENCES trainings(id) ON DELETE SET NULL,
+  score integer,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS timeline_reactions (
+  post_id text NOT NULL REFERENCES timeline_posts(id) ON DELETE CASCADE,
+  user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  emoji text NOT NULL,
+  PRIMARY KEY (post_id, user_id, emoji)
+);
+CREATE TABLE IF NOT EXISTS timeline_comments (
+  id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  post_id text NOT NULL REFERENCES timeline_posts(id) ON DELETE CASCADE,
+  user_id text REFERENCES users(id) ON DELETE SET NULL,
+  author_name text NOT NULL,
+  body text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
 -- Blog "Conheça Mais"
 CREATE TABLE IF NOT EXISTS blog_posts (
   id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
