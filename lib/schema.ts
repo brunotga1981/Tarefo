@@ -202,6 +202,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS tasks_seen_at timestamptz;
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_url text;
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_name text;
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS forwarded_from text;
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS edited_at timestamptz;
 ALTER TABLE conversations ADD COLUMN IF NOT EXISTS started_by text REFERENCES users(id) ON DELETE SET NULL;
 ALTER TABLE conversations ADD COLUMN IF NOT EXISTS finalized_at timestamptz;
 

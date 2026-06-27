@@ -143,6 +143,42 @@ export async function forwardMessagesAction(fd: FormData) {
   redirect(`/comunicacao?c=${target}`);
 }
 
+const EDIT_WINDOW_MS = 30 * 60 * 1000; // 30 minutos
+
+async function ownMessageWithinWindow(messageId: string, userId: string) {
+  const rows = await query<{ author_id: string | null; created_at: string }>(
+    `SELECT author_id, created_at FROM messages WHERE id = $1`,
+    [messageId]
+  );
+  const m = rows[0];
+  if (!m || m.author_id !== userId) return false;
+  return new Date(m.created_at).getTime() >= Date.now() - EDIT_WINDOW_MS;
+}
+
+export async function editMessageAction(fd: FormData) {
+  const user = await getCurrentUser();
+  if (!user) return;
+  const messageId = str(fd, "message_id");
+  const body = str(fd, "body");
+  if (!messageId || !body) return;
+  if (!(await ownMessageWithinWindow(messageId, user.id))) return;
+  await query(`UPDATE messages SET body = $2, edited_at = now() WHERE id = $1`, [
+    messageId,
+    body,
+  ]);
+  revalidatePath("/comunicacao");
+}
+
+export async function deleteMessageAction(fd: FormData) {
+  const user = await getCurrentUser();
+  if (!user) return;
+  const messageId = str(fd, "message_id");
+  if (!messageId) return;
+  if (!(await ownMessageWithinWindow(messageId, user.id))) return;
+  await query(`DELETE FROM messages WHERE id = $1`, [messageId]);
+  revalidatePath("/comunicacao");
+}
+
 export async function setPresenceAction(fd: FormData) {
   const user = await getCurrentUser();
   if (!user) return;

@@ -23,6 +23,7 @@ export type Message = {
   file_name: string | null;
   forwarded_from: string | null;
   created_at: string;
+  edited_at: string | null;
   reactions?: ReactionGroup[];
 };
 
@@ -156,7 +157,8 @@ export async function getMessages(
   userId: string
 ): Promise<Message[]> {
   const msgs = await query<Message>(
-    `SELECT id, author_id, author_name, body, file_url, file_name, forwarded_from, created_at
+    `SELECT id, author_id, author_name, body, file_url, file_name, forwarded_from,
+            created_at, edited_at
      FROM messages WHERE conversation_id = $1 ORDER BY created_at ASC`,
     [conversationId]
   );
