@@ -199,6 +199,8 @@ CREATE TABLE IF NOT EXISTS messages (
 -- Torpedo v2
 ALTER TABLE users ADD COLUMN IF NOT EXISTS presence text NOT NULL DEFAULT 'Disponível';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS tasks_seen_at timestamptz;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS birth_date date;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone text;
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_url text;
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_name text;
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS forwarded_from text;

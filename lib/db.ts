@@ -98,10 +98,10 @@ async function seedAccess() {
   // Usuários (senha padrão de demonstração)
   const pwd = hashPassword("tarefo123");
   await pool.query(
-    `INSERT INTO users (name, email, role, username, password_hash, profile_id) VALUES
-      ('Administrador', 'admin@azuladministradora.com.br', 'Administrador', 'admin', $1, $2),
-      ('Bruno Tarefo', 'brunotga@yahoo.com.br', 'Gestor', 'brunotga', $1, $3),
-      ('Equipe Atendimento', 'atendimento@azuladministradora.com.br', 'Membro', 'atendimento', $1, $4)`,
+    `INSERT INTO users (name, email, role, username, password_hash, profile_id, birth_date, phone) VALUES
+      ('Administrador', 'admin@azuladministradora.com.br', 'Administrador', 'admin', $1, $2, '1985-03-15', '(11) 90000-0001'),
+      ('Bruno Tarefo', 'brunotga@yahoo.com.br', 'Gestor', 'brunotga', $1, $3, '1990-06-27', '(11) 90000-0002'),
+      ('Equipe Atendimento', 'atendimento@azuladministradora.com.br', 'Membro', 'atendimento', $1, $4, '1995-12-10', '(11) 90000-0003')`,
     [pwd, adminId, gestorId, membroId]
   );
 
