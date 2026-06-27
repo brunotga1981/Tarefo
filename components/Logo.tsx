@@ -1,21 +1,31 @@
+/* eslint-disable @next/next/no-img-element */
+
 /**
- * Marca textual do Tarefo nas cores da Azul Administradora.
- * (Placeholder até recebermos a logo oficial em alta resolução.)
+ * Logo oficial do Tarefo.
+ * - compact: apenas o ícone (para espaços estreitos)
+ * - padrão: logo completa
  */
-export function Logo({ compact = false }: { compact?: boolean }) {
+export function Logo({
+  compact = false,
+  className,
+}: {
+  compact?: boolean;
+  className?: string;
+}) {
+  if (compact) {
+    return (
+      <img
+        src="/logo-tarefo-icon.png"
+        alt="Tarefo"
+        className={className ?? "h-8 w-auto select-none"}
+      />
+    );
+  }
   return (
-    <div className="flex items-center gap-2 select-none">
-      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-azul-navy text-white font-bold">
-        T
-      </div>
-      {!compact && (
-        <div className="leading-tight">
-          <span className="block text-lg font-bold text-azul-navy">Tarefo</span>
-          <span className="block text-[10px] font-medium uppercase tracking-widest text-azul">
-            Azul Administradora
-          </span>
-        </div>
-      )}
-    </div>
+    <img
+      src="/logo-tarefo.png"
+      alt="Tarefo — Azul Administradora"
+      className={`w-auto select-none ${className ?? "h-9"}`}
+    />
   );
 }
