@@ -27,6 +27,11 @@ export const PERMISSIONS = [
     label: "Gerenciar treinamentos",
     group: "Administração",
   },
+  {
+    key: "blog.manage",
+    label: "Gerenciar conteúdo da Intranet (Conheça Mais)",
+    group: "Administração",
+  },
 ] as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[number]["key"];

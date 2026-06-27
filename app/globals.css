@@ -14,3 +14,15 @@ body {
 body {
   @apply bg-azul-bg text-slate-800 antialiased;
 }
+
+/* Impressão (certificado): esconde o cabeçalho e o menu lateral */
+@media print {
+  aside,
+  header {
+    display: none !important;
+  }
+  main {
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+}

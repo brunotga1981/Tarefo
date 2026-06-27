@@ -224,13 +224,73 @@ CREATE TABLE IF NOT EXISTS conversation_ratings (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
--- Treinamentos (materiais/cursos internos)
+-- Treinamentos / cursos internos (LMS)
 CREATE TABLE IF NOT EXISTS trainings (
   id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
   title text NOT NULL,
   category text,
   description text,
   url text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE trainings ADD COLUMN IF NOT EXISTS theme text;
+ALTER TABLE trainings ADD COLUMN IF NOT EXISTS subtheme text;
+ALTER TABLE trainings ADD COLUMN IF NOT EXISTS image_url text;
+
+-- Materiais do curso (vídeo, PDF, PPT, link...)
+CREATE TABLE IF NOT EXISTS training_materials (
+  id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  training_id text NOT NULL REFERENCES trainings(id) ON DELETE CASCADE,
+  kind text NOT NULL DEFAULT 'LINK', -- VIDEO | PDF | PPT | LINK | OUTRO
+  title text NOT NULL,
+  url text NOT NULL,
+  "order" integer NOT NULL DEFAULT 0
+);
+
+-- Quiz: perguntas e opções
+CREATE TABLE IF NOT EXISTS training_questions (
+  id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  training_id text NOT NULL REFERENCES trainings(id) ON DELETE CASCADE,
+  prompt text NOT NULL,
+  "order" integer NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS training_options (
+  id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  question_id text NOT NULL REFERENCES training_questions(id) ON DELETE CASCADE,
+  text text NOT NULL,
+  is_correct boolean NOT NULL DEFAULT false,
+  "order" integer NOT NULL DEFAULT 0
+);
+
+-- Conclusão do curso (resultado do quiz)
+CREATE TABLE IF NOT EXISTS training_completions (
+  training_id text NOT NULL REFERENCES trainings(id) ON DELETE CASCADE,
+  user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  score integer NOT NULL DEFAULT 0,
+  passed boolean NOT NULL DEFAULT false,
+  completed_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (training_id, user_id)
+);
+
+-- Fórum de dúvidas (perguntas e respostas) por curso
+CREATE TABLE IF NOT EXISTS training_forum (
+  id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  training_id text NOT NULL REFERENCES trainings(id) ON DELETE CASCADE,
+  user_id text REFERENCES users(id) ON DELETE SET NULL,
+  author_name text NOT NULL,
+  parent_id text REFERENCES training_forum(id) ON DELETE CASCADE,
+  body text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Blog "Conheça Mais"
+CREATE TABLE IF NOT EXISTS blog_posts (
+  id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  title text NOT NULL,
+  theme text,
+  summary text,
+  content text,
+  image_url text,
   created_at timestamptz NOT NULL DEFAULT now()
 );
 

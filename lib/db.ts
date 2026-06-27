@@ -82,6 +82,7 @@ async function seedAccess() {
     "projects.manage",
     "users.manage",
     "trainings.manage",
+    "blog.manage",
   ]) {
     await pool.query(
       `INSERT INTO profile_permissions (profile_id, permission) VALUES ($1,$2)`,

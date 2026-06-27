@@ -60,28 +60,8 @@ export function Sidebar({ permissions }: { permissions: string[] }) {
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-        {items.map((item) => (
-          <Link
-            key={item.label}
-            href={item.href}
-            className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition ${
-              item.soon ? "text-slate-400" : "text-slate-600 hover:bg-slate-100"
-            }`}
-          >
-            <span className="flex items-center gap-2">
-              <span>{item.icon}</span>
-              {item.label}
-            </span>
-            {item.soon && (
-              <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-slate-400">
-                em breve
-              </span>
-            )}
-          </Link>
-        ))}
-
-        {/* Grupo Intranet (expansível) */}
-        <details className="group">
+        {/* Grupo Intranet (primeiro da lista, expansível) */}
+        <details className="group" open>
           <summary className="flex cursor-pointer list-none items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100">
             <span className="flex items-center gap-2">
               <span>{INTRANET.icon}</span>
@@ -103,6 +83,26 @@ export function Sidebar({ permissions }: { permissions: string[] }) {
             ))}
           </div>
         </details>
+
+        {items.map((item) => (
+          <Link
+            key={item.label}
+            href={item.href}
+            className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition ${
+              item.soon ? "text-slate-400" : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <span>{item.icon}</span>
+              {item.label}
+            </span>
+            {item.soon && (
+              <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-slate-400">
+                em breve
+              </span>
+            )}
+          </Link>
+        ))}
       </nav>
     </aside>
   );
