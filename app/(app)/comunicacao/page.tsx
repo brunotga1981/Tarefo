@@ -73,9 +73,13 @@ export default async function TorpedoPage({
     !(await hasRated(conversation.id, user.id));
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] gap-4">
+    <div className="flex h-[calc(100vh-8rem)] gap-4">
       {/* Lista de conversas */}
-      <aside className="flex w-72 flex-col overflow-y-auto rounded-xl border border-slate-200 bg-white p-3">
+      <aside
+        className={`${
+          selectedId ? "hidden md:flex" : "flex"
+        } w-full flex-col overflow-y-auto rounded-xl border border-slate-200 bg-white p-3 md:w-72`}
+      >
         <h1 className="mb-1 px-1 text-lg font-bold text-azul-navy">Torpedo</h1>
 
         {/* Status de presença */}
@@ -175,7 +179,11 @@ export default async function TorpedoPage({
       </aside>
 
       {/* Conversa selecionada */}
-      <section className="flex flex-1 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <section
+        className={`${
+          selectedId ? "flex" : "hidden md:flex"
+        } flex-1 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white`}
+      >
         {!conversation ? (
           <div className="flex flex-1 items-center justify-center text-sm text-slate-400">
             Selecione uma conversa, grupo ou canal de cliente.
@@ -184,7 +192,14 @@ export default async function TorpedoPage({
           <>
             <AutoRefresh />
             <header className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-5 py-3">
-              <h2 className="font-semibold text-azul-navy">
+              <h2 className="flex items-center gap-2 font-semibold text-azul-navy">
+                <Link
+                  href="/comunicacao"
+                  className="text-slate-400 hover:text-azul md:hidden"
+                  aria-label="Voltar"
+                >
+                  ←
+                </Link>
                 {conversation.title}
               </h2>
               <div className="flex items-center gap-3 text-xs text-slate-500">
