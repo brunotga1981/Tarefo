@@ -37,6 +37,7 @@ export const PERMISSIONS = [
     label: "Publicar na Time Line",
     group: "Intranet",
   },
+  { key: "sac.manage", label: "Atender o SAC", group: "SAC" },
 ] as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[number]["key"];

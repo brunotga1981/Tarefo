@@ -33,6 +33,7 @@ const NAV: NavItem[] = [
     perm: "templates.manage",
   },
   { label: "Treinamentos", href: "/treinamentos", icon: "🎓" },
+  { label: "SAC", href: "/sac", icon: "📨", perm: "sac.manage" },
   { label: "Usuários", href: "/usuarios", icon: "👥", perm: "users.manage" },
   { label: "Perfis", href: "/perfis", icon: "🔐", perm: "access.manage" },
   { label: "Grupos", href: "/grupos", icon: "👪", perm: "access.manage" },

@@ -224,6 +224,21 @@ CREATE TABLE IF NOT EXISTS conversation_ratings (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- SAC: tickets recebidos por e-mail, Superlógica e WhatsApp
+CREATE TABLE IF NOT EXISTS sac_tickets (
+  id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  channel text NOT NULL,            -- EMAIL | SUPERLOGICA | WHATSAPP
+  external_id text,                 -- id de origem (ticket Superlógica, msg-id, etc.)
+  subject text,
+  requester text,                   -- nome/e-mail/telefone do solicitante
+  body text,
+  conversation_status text,         -- WhatsApp: ABERTA | FECHADA
+  status text NOT NULL DEFAULT 'ABERTO', -- ABERTO | CONVERTIDO | FECHADO
+  client_id text REFERENCES clients(id) ON DELETE SET NULL,
+  task_id text REFERENCES tasks(id) ON DELETE SET NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
 -- Treinamentos / cursos internos (LMS)
 CREATE TABLE IF NOT EXISTS trainings (
   id text PRIMARY KEY DEFAULT gen_random_uuid()::text,

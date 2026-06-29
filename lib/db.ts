@@ -84,13 +84,20 @@ async function seedAccess() {
     "trainings.manage",
     "blog.manage",
     "timeline.post",
+    "sac.manage",
   ]) {
     await pool.query(
       `INSERT INTO profile_permissions (profile_id, permission) VALUES ($1,$2)`,
       [gestorId, key]
     );
   }
-  for (const key of ["tasks.view", "tasks.manage", "clients.view", "projects.view"]) {
+  for (const key of [
+    "tasks.view",
+    "tasks.manage",
+    "clients.view",
+    "projects.view",
+    "sac.manage",
+  ]) {
     await pool.query(
       `INSERT INTO profile_permissions (profile_id, permission) VALUES ($1,$2)`,
       [membroId, key]
