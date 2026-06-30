@@ -18,7 +18,7 @@ export default async function ConhecaMaisPage() {
     <div className="mx-auto max-w-5xl">
       <h1 className="mb-1 text-2xl font-bold text-azul-navy">Conheça Mais</h1>
       <p className="mb-6 text-sm text-slate-500">
-        Temas e assuntos da Azul Administradora.
+        Curiosidades e Informações sobre as Empresas TGA e seus colaboradores.
       </p>
 
       {canManage && (
