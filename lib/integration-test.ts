@@ -92,7 +92,18 @@ async function testZapi(v: Record<string, string>): Promise<TestResult> {
 }
 
 // ---- E-mail (SMTP / Locaweb) via socket nativo ----
-function testSmtp(v: Record<string, string>): Promise<TestResult> {
+type SmtpCmd = (text: string | null) => Promise<{ code: number; line: string }>;
+
+/**
+ * Abre a sessão SMTP (conexão + EHLO + STARTTLS/TLS + AUTH LOGIN) e entrega um
+ * `cmd` autenticado ao callback `after`, que decide o resultado via `done`.
+ * Reutilizado pelo teste de conexão e pelo envio real de e-mail.
+ */
+function smtpSession(
+  v: Record<string, string>,
+  needsAuth: boolean,
+  after: (cmd: SmtpCmd, done: (ok: boolean, message: string) => void) => Promise<void>
+): Promise<TestResult> {
   const host = v.SMTP_HOST;
   const port = Number(v.SMTP_PORT) || 587;
   const user = v.SMTP_USER;
@@ -118,7 +129,7 @@ function testSmtp(v: Record<string, string>): Promise<TestResult> {
       } catch {}
       resolve({ ok, message });
     };
-    const timer = setTimeout(() => done(false, "Tempo esgotado (12s)."), 12000);
+    const timer = setTimeout(() => done(false, "Tempo esgotado (15s)."), 15000);
 
     const onData = (d: Buffer) => {
       buf += d.toString("utf8");
@@ -133,8 +144,8 @@ function testSmtp(v: Record<string, string>): Promise<TestResult> {
         }
       }
     };
-    const cmd = (text: string | null) =>
-      new Promise<{ code: number; line: string }>((res) => {
+    const cmd: SmtpCmd = (text) =>
+      new Promise((res) => {
         waiters.push((code, line) => res({ code, line }));
         if (text != null) sock.write(text + "\r\n");
       });
@@ -160,18 +171,20 @@ function testSmtp(v: Record<string, string>): Promise<TestResult> {
           r = await cmd("EHLO tarefo");
         }
 
-        if (!user)
-          return done(true, "Conexão e TLS OK (sem usuário/senha para autenticar).");
+        if (user) {
+          r = await cmd("AUTH LOGIN");
+          if (r.code !== 334)
+            return done(false, `AUTH LOGIN não suportado: ${r.line}`);
+          r = await cmd(Buffer.from(user).toString("base64"));
+          if (r.code !== 334) return done(false, `Usuário rejeitado: ${r.line}`);
+          r = await cmd(Buffer.from(pass || "").toString("base64"));
+          if (r.code !== 235)
+            return done(false, `Falha na autenticação (${r.code}): ${r.line}`);
+        } else if (needsAuth) {
+          return done(false, "Informe usuário e senha para enviar o e-mail.");
+        }
 
-        r = await cmd("AUTH LOGIN");
-        if (r.code !== 334)
-          return done(false, `AUTH LOGIN não suportado: ${r.line}`);
-        r = await cmd(Buffer.from(user).toString("base64"));
-        if (r.code !== 334) return done(false, `Usuário rejeitado: ${r.line}`);
-        r = await cmd(Buffer.from(pass || "").toString("base64"));
-        if (r.code === 235)
-          return done(true, "Autenticação SMTP bem-sucedida.");
-        return done(false, `Falha na autenticação (${r.code}): ${r.line}`);
+        await after(cmd, done);
       } catch (e: any) {
         done(false, `Erro: ${e?.message ?? e}`);
       }
@@ -187,6 +200,60 @@ function testSmtp(v: Record<string, string>): Promise<TestResult> {
     } catch (e: any) {
       done(false, `Erro: ${e?.message ?? e}`);
     }
+  });
+}
+
+function testSmtp(v: Record<string, string>): Promise<TestResult> {
+  return smtpSession(v, false, async (_cmd, done) => {
+    done(
+      true,
+      v.SMTP_USER
+        ? "Autenticação SMTP bem-sucedida."
+        : "Conexão e TLS OK (sem usuário/senha para autenticar)."
+    );
+  });
+}
+
+/** Envia um e-mail de teste real de ponta a ponta. */
+export function sendTestEmail(
+  v: Record<string, string>,
+  to: string
+): Promise<TestResult> {
+  const recipient = String(to ?? "").trim();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(recipient))
+    return Promise.resolve({ ok: false, message: "Informe um e-mail destinatário válido." });
+  const from = (v.SMTP_FROM || v.SMTP_USER || "").trim();
+  if (!from)
+    return Promise.resolve({ ok: false, message: "Defina o remetente (From) ou o usuário." });
+
+  return smtpSession(v, true, async (cmd, done) => {
+    let r = await cmd(`MAIL FROM:<${from}>`);
+    if (r.code !== 250) return done(false, `MAIL FROM recusado (${r.code}): ${r.line}`);
+    r = await cmd(`RCPT TO:<${recipient}>`);
+    if (r.code !== 250 && r.code !== 251)
+      return done(false, `Destinatário recusado (${r.code}): ${r.line}`);
+    r = await cmd("DATA");
+    if (r.code !== 354) return done(false, `DATA recusado (${r.code}): ${r.line}`);
+
+    const date = new Date().toUTCString();
+    const message = [
+      `From: Tarefo <${from}>`,
+      `To: <${recipient}>`,
+      `Subject: =?UTF-8?B?${Buffer.from("Teste de e-mail — Tarefo").toString("base64")}?=`,
+      `Date: ${date}`,
+      "MIME-Version: 1.0",
+      'Content-Type: text/plain; charset="utf-8"',
+      "",
+      "Este é um e-mail de teste enviado pela tela API do Tarefo.",
+      "Se você recebeu esta mensagem, a configuração de SMTP está funcionando. ✅",
+      "",
+      ".",
+    ].join("\r\n");
+
+    r = await cmd(message);
+    if (r.code === 250)
+      return done(true, `E-mail de teste enviado para ${recipient}.`);
+    return done(false, `Envio recusado (${r.code}): ${r.line}`);
   });
 }
 

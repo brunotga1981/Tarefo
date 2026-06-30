@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser, can } from "@/lib/auth";
 import { SETTING_GROUPS, getSetting } from "@/lib/settings";
-import { runIntegrationTest } from "@/lib/integration-test";
+import { runIntegrationTest, sendTestEmail } from "@/lib/integration-test";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, message: "Sem permissão." }, { status: 403 });
   }
 
-  let payload: { group?: string; values?: Record<string, string> } = {};
+  let payload: {
+    group?: string;
+    values?: Record<string, string>;
+    mode?: string;
+    to?: string;
+  } = {};
   try {
     payload = await req.json();
   } catch {
@@ -34,6 +39,17 @@ export async function POST(req: NextRequest) {
   for (const f of group.fields) {
     const v = String(sent[f.key] ?? "").trim();
     values[f.key] = v !== "" ? v : (await getSetting(f.key)) ?? "";
+  }
+
+  if (payload.mode === "send-email") {
+    if (group.id !== "smtp") {
+      return NextResponse.json(
+        { ok: false, message: "Envio de e-mail só se aplica ao SMTP." },
+        { status: 400 }
+      );
+    }
+    const result = await sendTestEmail(values, String(payload.to ?? ""));
+    return NextResponse.json(result);
   }
 
   const result = await runIntegrationTest(group.id, values);

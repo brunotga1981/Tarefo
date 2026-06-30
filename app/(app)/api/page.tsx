@@ -4,6 +4,8 @@ import { getCurrentUser, can } from "@/lib/auth";
 import { NoAccess } from "@/components/NoAccess";
 import { SETTING_GROUPS, getStoredSettings } from "@/lib/settings";
 import { ApiTestButton } from "@/components/ApiTestButton";
+import { EmailTestSender } from "@/components/EmailTestSender";
+import { TestAllButton } from "@/components/TestAllButton";
 import { saveApiKeysAction } from "./actions";
 
 const field =
@@ -82,10 +84,24 @@ export default async function ApiPage() {
               groupId={g.id}
               fieldKeys={g.fields.map((f) => f.key)}
             />
+
+            {g.id === "smtp" && (
+              <EmailTestSender
+                smtpKeys={g.fields.map((f) => f.key)}
+                defaultTo={user!.email}
+              />
+            )}
           </section>
         ))}
 
-        <div className="flex items-center justify-end gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <TestAllButton
+            groups={SETTING_GROUPS.map((g) => ({
+              id: g.id,
+              title: g.title,
+              fieldKeys: g.fields.map((f) => f.key),
+            }))}
+          />
           <button className="rounded-lg bg-azul px-5 py-2.5 text-sm font-semibold text-white hover:bg-azul-navy">
             Salvar chaves
           </button>
