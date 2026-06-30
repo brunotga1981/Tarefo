@@ -43,9 +43,13 @@ export async function createTimelinePostAction(fd: FormData) {
   const imageUrl = await resolveFormImage(fd);
   const publishAt = str(fd, "publish_at") || null;
   const expiresAt = str(fd, "expires_at") || null;
+  // O datetime-local vem como hora local (BRT) sem fuso; interpretamos como
+  // America/Sao_Paulo para gravar o instante correto (a sessão do banco é UTC).
   const rows = await query<{ id: string }>(
     `INSERT INTO timeline_posts (kind, author_id, author_name, body, image_url, publish_at, expires_at)
-     VALUES ('POST',$1,$2,$3,$4,$5,$6) RETURNING id`,
+     VALUES ('POST',$1,$2,$3,$4,
+             $5::timestamp AT TIME ZONE 'America/Sao_Paulo',
+             $6::timestamp AT TIME ZONE 'America/Sao_Paulo') RETURNING id`,
     [user!.id, user!.name, body, imageUrl, publishAt, expiresAt]
   );
   const highlightIds = fd.getAll("highlight_ids").map(String).filter(Boolean);
