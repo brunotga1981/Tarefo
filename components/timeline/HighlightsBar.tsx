@@ -16,9 +16,13 @@ import {
 export function HighlightsBar({
   highlights,
   canManage,
+  currentUserId,
+  canModerate,
 }: {
   highlights: HighlightWithStories[];
   canManage: boolean;
+  currentUserId: string;
+  canModerate?: boolean;
 }) {
   const withPosts = highlights.filter((h) => h.posts.length > 0);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -169,6 +173,8 @@ export function HighlightsBar({
           startIndex={startIndex}
           onClose={() => setOpenId(null)}
           onView={onView}
+          currentUserId={currentUserId}
+          canModerate={canModerate}
         />
       )}
     </div>

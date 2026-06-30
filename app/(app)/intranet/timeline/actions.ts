@@ -11,6 +11,7 @@ import {
   updateHighlight,
   moveHighlight,
   markStoryViewed,
+  getStoryViewers,
 } from "@/lib/timeline";
 import { generatePostCopy, generatePostImage } from "@/lib/ai";
 
@@ -98,6 +99,21 @@ export async function markStoryViewedAction(postId: string) {
   const user = await getCurrentUser();
   if (!user || !postId) return;
   await markStoryViewed(user.id, postId);
+}
+
+// Lista quem viu um story — só o autor do post ou um moderador.
+export async function getStoryViewersAction(
+  postId: string
+): Promise<{ name: string; viewed_at: string }[]> {
+  const user = await getCurrentUser();
+  if (!user || !postId) return [];
+  const owner = await query<{ author_id: string | null }>(
+    `SELECT author_id FROM timeline_posts WHERE id=$1`,
+    [postId]
+  );
+  const isOwner = owner[0]?.author_id === user.id;
+  if (!isOwner && !can(user, "blog.manage")) return [];
+  return getStoryViewers(postId);
 }
 
 // Editar o próprio post (autor a qualquer momento) ou quem gerencia conteúdo.

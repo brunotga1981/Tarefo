@@ -3,7 +3,10 @@
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useState } from "react";
 import { TL_REACTIONS, type HighlightWithStories } from "@/lib/timeline-types";
-import { toggleTimelineReactionAction } from "@/app/(app)/intranet/timeline/actions";
+import {
+  toggleTimelineReactionAction,
+  getStoryViewersAction,
+} from "@/app/(app)/intranet/timeline/actions";
 
 const DURATION = 6000; // ms por story
 
@@ -12,27 +15,45 @@ export function StoryViewer({
   startIndex,
   onClose,
   onView,
+  currentUserId,
+  canModerate,
 }: {
   highlights: HighlightWithStories[];
   startIndex: number;
   onClose: () => void;
   onView?: (postId: string) => void;
+  currentUserId: string;
+  canModerate?: boolean;
 }) {
   const [hi, setHi] = useState(startIndex); // índice do destaque
   const [si, setSi] = useState(0); // índice do story dentro do destaque
   const [progress, setProgress] = useState(0);
   const [reacted, setReacted] = useState<string | null>(null);
+  const [viewers, setViewers] = useState<{ name: string }[] | null>(null);
 
   const highlight = highlights[hi];
   const stories = highlight?.posts ?? [];
   const story = stories[si];
+  const canSeeViewers =
+    !!story && (story.author_id === currentUserId || !!canModerate);
 
   // Marca como visto ao exibir cada story
   useEffect(() => {
     setReacted(null);
+    setViewers(null);
     if (story && onView) onView(story.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hi, si]);
+
+  async function loadViewers() {
+    if (!story) return;
+    if (viewers) {
+      setViewers(null);
+      return;
+    }
+    const list = await getStoryViewersAction(story.id);
+    setViewers(list);
+  }
 
   async function react(emoji: string) {
     if (!story) return;
@@ -64,10 +85,10 @@ export function StoryViewer({
     else prevHighlight();
   }
 
-  // Auto-avanço com barra de progresso
+  // Auto-avanço com barra de progresso (pausa quando a lista de quem viu está aberta)
   useEffect(() => {
     setProgress(0);
-    if (!story) return;
+    if (!story || viewers) return;
     const start = performance.now();
     let raf = 0;
     const tick = (t: number) => {
@@ -79,7 +100,7 @@ export function StoryViewer({
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hi, si]);
+  }, [hi, si, viewers]);
 
   // Teclado
   useEffect(() => {
@@ -125,9 +146,20 @@ export function StoryViewer({
             <span className="text-sm font-semibold">{highlight.title}</span>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-white/80" title="Visualizações">
-              👁 {story?.view_count ?? 0}
-            </span>
+            {canSeeViewers ? (
+              <button
+                type="button"
+                onClick={loadViewers}
+                className="text-xs text-white/80 hover:text-white"
+                title="Ver quem visualizou"
+              >
+                👁 {story?.view_count ?? 0}
+              </button>
+            ) : (
+              <span className="text-xs text-white/80" title="Visualizações">
+                👁 {story?.view_count ?? 0}
+              </span>
+            )}
             <button onClick={onClose} className="text-2xl leading-none text-white/90 hover:text-white">
               ✕
             </button>
@@ -153,6 +185,23 @@ export function StoryViewer({
         {story?.image_url && story?.body && (
           <div className="absolute bottom-16 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 pt-10 text-sm text-white">
             <span className="font-semibold">{story.author_name}</span> {story.body}
+          </div>
+        )}
+
+        {/* Lista de quem visualizou (autor/moderador) */}
+        {viewers && (
+          <div className="absolute bottom-16 left-0 right-0 z-20 mx-3 max-h-56 overflow-y-auto rounded-lg bg-white/95 p-3 text-sm shadow-lg">
+            <p className="mb-2 text-xs font-semibold text-slate-500">
+              Visualizações ({viewers.length})
+            </p>
+            {viewers.length === 0 && (
+              <p className="text-xs text-slate-400">Ninguém visualizou ainda.</p>
+            )}
+            {viewers.map((v, i) => (
+              <div key={i} className="py-0.5 text-slate-700">
+                {v.name}
+              </div>
+            ))}
           </div>
         )}
 

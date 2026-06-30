@@ -49,7 +49,9 @@ export async function listTimeline(
     `SELECT p.id, p.kind, p.author_id, p.author_name, p.body, p.image_url,
             p.course_id, t.title AS course_title, p.score, p.created_at,
             p.publish_at, p.expires_at,
-            (SELECT count(*)::int FROM story_views v WHERE v.post_id = p.id) AS view_count
+            (SELECT count(*)::int FROM story_views v
+              WHERE v.post_id = p.id
+                AND (p.author_id IS NULL OR v.user_id <> p.author_id)) AS view_count
      FROM timeline_posts p
      LEFT JOIN trainings t ON t.id = p.course_id
      WHERE ${conds.join(" AND ")}
@@ -111,9 +113,11 @@ export async function getHighlightStories(
   );
   if (hs.length === 0) return [];
   const rows = await query<Story & { highlight_id: string }>(
-    `SELECT ph.highlight_id, p.id, p.body, p.image_url, p.author_name, p.created_at,
+    `SELECT ph.highlight_id, p.id, p.body, p.image_url, p.author_name, p.author_id, p.created_at,
             EXISTS (SELECT 1 FROM story_views v WHERE v.post_id = p.id AND v.user_id = $1) AS seen,
-            (SELECT count(*)::int FROM story_views v2 WHERE v2.post_id = p.id) AS view_count
+            (SELECT count(*)::int FROM story_views v2
+              WHERE v2.post_id = p.id
+                AND (p.author_id IS NULL OR v2.user_id <> p.author_id)) AS view_count
      FROM timeline_post_highlights ph
      JOIN timeline_posts p ON p.id = ph.post_id
      WHERE (p.publish_at IS NULL OR p.publish_at <= now())
@@ -137,6 +141,22 @@ export async function markStoryViewed(
     `INSERT INTO story_views (user_id, post_id) VALUES ($1,$2)
      ON CONFLICT DO NOTHING`,
     [userId, postId]
+  );
+}
+
+/** Lista quem viu um story (exclui o autor), para exibir ao autor/moderador. */
+export async function getStoryViewers(
+  postId: string
+): Promise<{ name: string; viewed_at: string }[]> {
+  return query<{ name: string; viewed_at: string }>(
+    `SELECT u.name, v.viewed_at
+     FROM story_views v
+     JOIN users u ON u.id = v.user_id
+     JOIN timeline_posts p ON p.id = v.post_id
+     WHERE v.post_id = $1
+       AND (p.author_id IS NULL OR v.user_id <> p.author_id)
+     ORDER BY v.viewed_at DESC`,
+    [postId]
   );
 }
 

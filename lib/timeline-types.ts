@@ -36,6 +36,7 @@ export type Story = {
   body: string | null;
   image_url: string | null;
   author_name: string;
+  author_id: string | null;
   created_at: string;
   seen?: boolean;
   view_count?: number;

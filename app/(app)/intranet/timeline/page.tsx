@@ -26,7 +26,12 @@ export default async function TimelinePage() {
         Novidades e conquistas da equipe.
       </p>
 
-      <HighlightsBar highlights={highlights} canManage={canHighlights} />
+      <HighlightsBar
+        highlights={highlights}
+        canManage={canHighlights}
+        currentUserId={user.id}
+        canModerate={canModerate}
+      />
 
       {canPost && (
         <TimelineComposer
