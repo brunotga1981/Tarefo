@@ -30,4 +30,13 @@ export type Highlight = {
   image_url: string | null;
 };
 
+export type Story = {
+  id: string;
+  body: string | null;
+  image_url: string | null;
+  author_name: string;
+  created_at: string;
+};
+export type HighlightWithStories = Highlight & { posts: Story[] };
+
 export const TL_REACTIONS = ["❤️", "👏", "🎉", "👍", "🔥"];

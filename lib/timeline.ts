@@ -1,6 +1,19 @@
 import { query } from "./db";
-import type { TLPost, TLComment, Highlight } from "./timeline-types";
-export type { TLPost, TLReaction, TLComment, Highlight } from "./timeline-types";
+import type {
+  TLPost,
+  TLComment,
+  Highlight,
+  Story,
+  HighlightWithStories,
+} from "./timeline-types";
+export type {
+  TLPost,
+  TLReaction,
+  TLComment,
+  Highlight,
+  Story,
+  HighlightWithStories,
+} from "./timeline-types";
 export { TL_REACTIONS } from "./timeline-types";
 
 export async function listTimeline(
@@ -86,6 +99,28 @@ export async function listHighlights(): Promise<Highlight[]> {
   return query<Highlight>(
     `SELECT id, title, image_url FROM highlights ORDER BY "order", created_at`
   );
+}
+
+/** Destaques com seus posts (somente posts ativos), para o visualizador de stories. */
+export async function getHighlightStories(): Promise<HighlightWithStories[]> {
+  const hs = await query<Highlight>(
+    `SELECT id, title, image_url FROM highlights ORDER BY "order", created_at`
+  );
+  if (hs.length === 0) return [];
+  const rows = await query<Story & { highlight_id: string }>(
+    `SELECT ph.highlight_id, p.id, p.body, p.image_url, p.author_name, p.created_at
+     FROM timeline_post_highlights ph
+     JOIN timeline_posts p ON p.id = ph.post_id
+     WHERE (p.publish_at IS NULL OR p.publish_at <= now())
+       AND (p.expires_at IS NULL OR p.expires_at > now())
+     ORDER BY p.created_at DESC`
+  );
+  return hs.map((h) => ({
+    ...h,
+    posts: rows
+      .filter((r) => r.highlight_id === h.id)
+      .map(({ highlight_id, ...s }) => s),
+  }));
 }
 
 export async function createHighlight(
