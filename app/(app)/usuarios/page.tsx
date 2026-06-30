@@ -138,12 +138,15 @@ export default async function UsuariosPage({
 }) {
   const user = await getCurrentUser();
   if (!can(user, "users.manage")) return <NoAccess />;
+  // Apenas administradores podem visualizar os usuários desativados.
+  const isAdmin = can(user, "access.manage");
   const [allUsers, profiles] = await Promise.all([
     listUsersFull(),
     listProfilesWithPerms(),
   ]);
 
-  const status = searchParams.status === "desativados" ? "desativados" : "ativos";
+  const status =
+    isAdmin && searchParams.status === "desativados" ? "desativados" : "ativos";
   const activeCount = allUsers.filter((u) => u.active).length;
   const inactiveCount = allUsers.length - activeCount;
   const users = allUsers.filter((u) =>
@@ -185,29 +188,31 @@ export default async function UsuariosPage({
         </ResetForm>
       </details>
 
-      {/* Filtro Ativos / Desativados */}
-      <div className="mb-4 flex gap-2">
-        <Link
-          href="/usuarios"
-          className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-            status === "ativos"
-              ? "border-azul bg-azul-suave/30 text-azul-navy"
-              : "border-slate-200 bg-white text-slate-500 hover:border-azul hover:text-azul"
-          }`}
-        >
-          Ativos ({activeCount})
-        </Link>
-        <Link
-          href="/usuarios?status=desativados"
-          className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-            status === "desativados"
-              ? "border-azul bg-azul-suave/30 text-azul-navy"
-              : "border-slate-200 bg-white text-slate-500 hover:border-azul hover:text-azul"
-          }`}
-        >
-          Desativados ({inactiveCount})
-        </Link>
-      </div>
+      {/* Filtro Ativos / Desativados (desativados só para administradores) */}
+      {isAdmin && (
+        <div className="mb-4 flex gap-2">
+          <Link
+            href="/usuarios"
+            className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+              status === "ativos"
+                ? "border-azul bg-azul-suave/30 text-azul-navy"
+                : "border-slate-200 bg-white text-slate-500 hover:border-azul hover:text-azul"
+            }`}
+          >
+            Ativos ({activeCount})
+          </Link>
+          <Link
+            href="/usuarios?status=desativados"
+            className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+              status === "desativados"
+                ? "border-azul bg-azul-suave/30 text-azul-navy"
+                : "border-slate-200 bg-white text-slate-500 hover:border-azul hover:text-azul"
+            }`}
+          >
+            Desativados ({inactiveCount})
+          </Link>
+        </div>
+      )}
 
       {/* Lista de usuários */}
       <div className="space-y-3">
@@ -285,19 +290,21 @@ export default async function UsuariosPage({
                   </button>
                 </form>
 
-                <form action={toggleUserActiveAction}>
-                  <input type="hidden" name="id" value={u.id} />
-                  <input type="hidden" name="active" value={u.active ? "false" : "true"} />
-                  <button
-                    className={`rounded-lg px-3 py-2 text-xs font-semibold text-white ${
-                      u.active
-                        ? "bg-red-500 hover:bg-red-600"
-                        : "bg-emerald-600 hover:bg-emerald-700"
-                    }`}
-                  >
-                    {u.active ? "Desativar usuário" : "Reativar usuário"}
-                  </button>
-                </form>
+                {isAdmin && (
+                  <form action={toggleUserActiveAction}>
+                    <input type="hidden" name="id" value={u.id} />
+                    <input type="hidden" name="active" value={u.active ? "false" : "true"} />
+                    <button
+                      className={`rounded-lg px-3 py-2 text-xs font-semibold text-white ${
+                        u.active
+                          ? "bg-red-500 hover:bg-red-600"
+                          : "bg-emerald-600 hover:bg-emerald-700"
+                      }`}
+                    >
+                      {u.active ? "Desativar usuário" : "Reativar usuário"}
+                    </button>
+                  </form>
+                )}
               </div>
             </details>
           </div>

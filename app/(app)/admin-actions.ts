@@ -121,7 +121,7 @@ export async function resetUserPasswordAction(fd: FormData) {
 }
 
 export async function toggleUserActiveAction(fd: FormData) {
-  await requirePerm("users.manage");
+  await requirePerm("access.manage"); // ativar/desativar é exclusivo de administradores
   const id = str(fd, "id");
   const active = str(fd, "active") === "true";
   if (!id) return;
