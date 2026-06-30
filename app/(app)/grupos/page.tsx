@@ -59,7 +59,11 @@ export default async function GruposPage() {
               className="rounded-xl border border-slate-200 bg-white p-5"
             >
               <h2 className="mb-3 text-sm font-semibold text-azul-navy">
-                👪 {g.name}
+                👪 {g.name}{" "}
+                <span className="text-xs font-normal text-slate-400">
+                  ({g.members.length}{" "}
+                  {g.members.length === 1 ? "membro" : "membros"})
+                </span>
               </h2>
 
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
@@ -77,7 +81,14 @@ export default async function GruposPage() {
                         key={m.id}
                         className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-1.5 text-sm text-slate-700"
                       >
-                        {m.name}
+                        <span className="flex items-center gap-2">
+                          {m.name}
+                          {m.team === g.name && (
+                            <span className="rounded-full bg-azul-suave/40 px-2 py-0.5 text-[10px] font-medium text-azul-navy">
+                              equipe
+                            </span>
+                          )}
+                        </span>
                         <form action={removeGroupMemberAction}>
                           <input type="hidden" name="group_id" value={g.id} />
                           <input type="hidden" name="user_id" value={m.id} />

@@ -73,7 +73,7 @@ export async function listProfilesWithPerms(): Promise<ProfileWithPerms[]> {
 export type GroupFull = {
   id: string;
   name: string;
-  members: { id: string; name: string }[];
+  members: { id: string; name: string; team: string | null }[];
   profileIds: string[];
 };
 
@@ -85,8 +85,9 @@ export async function listGroupsFull(): Promise<GroupFull[]> {
     group_id: string;
     id: string;
     name: string;
+    team: string | null;
   }>(
-    `SELECT gm.group_id, u.id, u.name FROM group_members gm
+    `SELECT gm.group_id, u.id, u.name, u.team FROM group_members gm
      JOIN users u ON u.id = gm.user_id ORDER BY u.name`
   );
   const gprofiles = await query<{ group_id: string; profile_id: string }>(
@@ -96,7 +97,7 @@ export async function listGroupsFull(): Promise<GroupFull[]> {
     ...g,
     members: members
       .filter((m) => m.group_id === g.id)
-      .map((m) => ({ id: m.id, name: m.name })),
+      .map((m) => ({ id: m.id, name: m.name, team: m.team })),
     profileIds: gprofiles
       .filter((p) => p.group_id === g.id)
       .map((p) => p.profile_id),
