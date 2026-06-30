@@ -149,6 +149,12 @@ export async function updateTimelinePostAction(fd: FormData) {
     args.push(newImage);
     sets.push(`image_url=$${args.length}`);
   }
+  // Agendamento (início/fim) — interpretado como America/Sao_Paulo; vazio = limpar
+  args.push(str(fd, "publish_at") || null);
+  sets.push(`publish_at=$${args.length}::timestamp AT TIME ZONE 'America/Sao_Paulo'`);
+  args.push(str(fd, "expires_at") || null);
+  sets.push(`expires_at=$${args.length}::timestamp AT TIME ZONE 'America/Sao_Paulo'`);
+
   let sql = `UPDATE timeline_posts SET ${sets.join(", ")} WHERE id=$1`;
   if (!can(user, "blog.manage")) {
     args.push(user.id);

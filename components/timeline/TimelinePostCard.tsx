@@ -18,6 +18,23 @@ function initials(name: string) {
   return name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 }
 
+/** Converte um timestamp para o valor de <input datetime-local> em horário BRT. */
+function toLocalInput(value?: string | null): string {
+  if (!value) return "";
+  const parts = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  })
+    .formatToParts(new Date(value))
+    .reduce<Record<string, string>>((a, p) => ((a[p.type] = p.value), a), {});
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+}
+
 export function TimelinePostCard({
   post,
   userId,
@@ -166,6 +183,36 @@ export function TimelinePostCard({
               placeholder="ou URL de imagem"
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-azul"
             />
+          </div>
+
+          {/* Agendamento (início/fim) */}
+          <div className="mt-2 rounded-lg border border-slate-100 bg-slate-50 p-2">
+            <p className="mb-1 text-[11px] font-semibold uppercase text-slate-400">
+              Agendamento (opcional)
+            </p>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <label className="text-xs text-slate-500">
+                Início
+                <input
+                  type="datetime-local"
+                  name="publish_at"
+                  defaultValue={toLocalInput(post.publish_at)}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1 text-sm"
+                />
+              </label>
+              <label className="text-xs text-slate-500">
+                Fim
+                <input
+                  type="datetime-local"
+                  name="expires_at"
+                  defaultValue={toLocalInput(post.expires_at)}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1 text-sm"
+                />
+              </label>
+            </div>
+            <p className="mt-1 text-[10px] text-slate-400">
+              Vazio no início = publica já. Vazio no fim = tempo indeterminado.
+            </p>
           </div>
 
           <div className="mt-1 flex gap-2">
