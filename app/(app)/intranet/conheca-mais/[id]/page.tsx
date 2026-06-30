@@ -3,8 +3,9 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getBlogPost } from "@/lib/blog";
+import { getBlogPost, listBlogComments } from "@/lib/blog";
 import { formatDate } from "@/lib/format";
+import { BlogComments } from "@/components/blog/BlogComments";
 
 export default async function BlogPostPage({
   params,
@@ -13,6 +14,7 @@ export default async function BlogPostPage({
 }) {
   const post = await getBlogPost(params.id);
   if (!post) notFound();
+  const comments = await listBlogComments(post.id);
 
   return (
     <article className="mx-auto max-w-3xl">
@@ -49,6 +51,8 @@ export default async function BlogPostPage({
           {post.content}
         </div>
       )}
+
+      <BlogComments postId={post.id} comments={comments} />
     </article>
   );
 }

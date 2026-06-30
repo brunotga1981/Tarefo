@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { query } from "@/lib/db";
 import { getCurrentUser, can } from "@/lib/auth";
 import { saveUpload } from "@/lib/upload";
+import { addBlogComment } from "@/lib/blog";
 
 async function requireManage() {
   const user = await getCurrentUser();
@@ -40,4 +41,15 @@ export async function deleteBlogPostAction(fd: FormData) {
   await requireManage();
   await query(`DELETE FROM blog_posts WHERE id=$1`, [str(fd, "id")]);
   revalidatePath("/intranet/conheca-mais");
+}
+
+// Comentar em uma postagem do blog — qualquer usuário autenticado.
+export async function addBlogCommentAction(fd: FormData) {
+  const user = await getCurrentUser();
+  if (!user) throw new Error("Não autenticado.");
+  const postId = str(fd, "post_id");
+  const body = str(fd, "body");
+  if (!postId || !body) return;
+  await addBlogComment(postId, user.id, user.name, body);
+  revalidatePath(`/intranet/conheca-mais/${postId}`);
 }

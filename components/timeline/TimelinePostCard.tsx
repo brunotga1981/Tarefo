@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { formatDateTime } from "@/lib/format";
 import { TL_REACTIONS, type TLPost } from "@/lib/timeline-types";
+import { EmojiInsert } from "@/components/EmojiInsert";
 import {
   toggleTimelineReactionAction,
   addTimelineCommentAction,
@@ -14,11 +15,6 @@ import {
 function initials(name: string) {
   return name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 }
-
-const EMOJIS = [
-  "😀", "😂", "😍", "🥰", "😎", "🤔", "👍", "👏",
-  "🙌", "🎉", "❤️", "🔥", "💡", "🙏", "😢", "😮",
-];
 
 export function TimelinePostCard({
   post,
@@ -31,7 +27,6 @@ export function TimelinePostCard({
 }) {
   const [showReact, setShowReact] = useState(false);
   const [comment, setComment] = useState("");
-  const [showEmoji, setShowEmoji] = useState(false);
   const isCert = post.kind === "CERTIFICATE";
   const totalReactions = post.reactions.reduce((s, r) => s + r.count, 0);
 
@@ -39,7 +34,6 @@ export function TimelinePostCard({
     if (!comment.trim()) return;
     await addTimelineCommentAction(fd);
     setComment("");
-    setShowEmoji(false);
   }
 
   return (
@@ -208,33 +202,15 @@ export function TimelinePostCard({
               placeholder="Adicione um comentário…"
               className="w-full rounded-full border border-slate-300 px-3 py-1.5 pr-9 text-sm outline-none focus:border-azul"
             />
-            <button
-              type="button"
-              onClick={() => setShowEmoji((v) => !v)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-lg"
-              title="Emojis"
-            >
-              😊
-            </button>
+            <EmojiInsert
+              onInsert={(e) => setComment((c) => c + e)}
+              className="absolute right-2 top-1/2 -translate-y-1/2"
+            />
           </div>
           <button className="text-sm font-semibold text-azul hover:text-azul-navy">
             Publicar
           </button>
         </div>
-        {showEmoji && (
-          <div className="mt-2 flex flex-wrap gap-1 rounded-lg border border-slate-200 bg-white p-2">
-            {EMOJIS.map((e) => (
-              <button
-                key={e}
-                type="button"
-                onClick={() => setComment((c) => c + e)}
-                className="rounded px-1 text-lg hover:bg-slate-100"
-              >
-                {e}
-              </button>
-            ))}
-          </div>
-        )}
       </form>
     </article>
   );

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useFormState } from "react-dom";
+import { EmojiInsert } from "@/components/EmojiInsert";
 import {
   createTimelinePostAction,
   aiPostCopyAction,
@@ -15,6 +16,13 @@ const field =
 export function TimelineComposer() {
   const [body, setBody] = useState("");
   const [topic, setTopic] = useState("");
+  const formRef = useRef<HTMLFormElement>(null);
+
+  async function publish(fd: FormData) {
+    await createTimelinePostAction(fd);
+    setBody("");
+    formRef.current?.reset(); // limpa upload/URL de imagem
+  }
   const [copyState, copyAction] = useFormState<AiPostState, FormData>(
     aiPostCopyAction,
     {}
@@ -71,15 +79,21 @@ export function TimelineComposer() {
       </div>
 
       {/* Publicação */}
-      <form action={createTimelinePostAction} className="space-y-2">
-        <textarea
-          name="body"
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          rows={3}
-          placeholder="Escreva a notícia/legenda…"
-          className={field}
-        />
+      <form ref={formRef} action={publish} className="space-y-2">
+        <div className="relative">
+          <textarea
+            name="body"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            rows={3}
+            placeholder="Escreva a notícia/legenda…"
+            className={`${field} pr-9`}
+          />
+          <EmojiInsert
+            onInsert={(e) => setBody((b) => b + e)}
+            className="absolute right-2 top-2"
+          />
+        </div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <label className="text-xs text-slate-500">
             Imagem (upload)

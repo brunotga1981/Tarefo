@@ -340,6 +340,16 @@ CREATE TABLE IF NOT EXISTS blog_posts (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- Comentários das postagens do Conheça Mais (blog)
+CREATE TABLE IF NOT EXISTS blog_comments (
+  id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  post_id text NOT NULL REFERENCES blog_posts(id) ON DELETE CASCADE,
+  user_id text REFERENCES users(id) ON DELETE SET NULL,
+  author_name text NOT NULL,
+  body text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
 -- Controle de leitura das conversas (para alertas de mensagens novas)
 CREATE TABLE IF NOT EXISTS conversation_reads (
   conversation_id text NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
