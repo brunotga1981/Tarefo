@@ -27,8 +27,16 @@ export function TimelinePostCard({
 }) {
   const [showReact, setShowReact] = useState(false);
   const [comment, setComment] = useState("");
+  const [showAllComments, setShowAllComments] = useState(false);
+  const [showCommentBox, setShowCommentBox] = useState(false);
   const isCert = post.kind === "CERTIFICATE";
   const totalReactions = post.reactions.reduce((s, r) => s + r.count, 0);
+
+  const VISIBLE = 2;
+  const visibleComments = showAllComments
+    ? post.comments
+    : post.comments.slice(0, VISIBLE);
+  const hiddenCount = post.comments.length - visibleComments.length;
 
   async function submitComment(fd: FormData) {
     if (!comment.trim()) return;
@@ -130,12 +138,12 @@ export function TimelinePostCard({
         >
           🤍 Curtir
         </button>
-        <label
-          htmlFor={`comment-${post.id}`}
+        <button
+          onClick={() => setShowCommentBox((v) => !v)}
           className="flex flex-1 cursor-pointer items-center justify-center gap-2 py-2 text-sm font-medium text-slate-500 hover:bg-slate-50"
         >
           💬 Comentar
-        </label>
+        </button>
       </div>
 
       {showReact && (
@@ -172,7 +180,16 @@ export function TimelinePostCard({
       {/* Seção de comentários (separada do conteúdo principal) */}
       {post.comments.length > 0 && (
         <div className="space-y-2 bg-slate-50 px-3 py-3">
-          {post.comments.map((c) => (
+          {!showAllComments && hiddenCount > 0 && (
+            <button
+              onClick={() => setShowAllComments(true)}
+              className="flex items-center gap-1 text-xs font-medium text-azul hover:underline"
+            >
+              ▼ Ver mais {hiddenCount}{" "}
+              {hiddenCount === 1 ? "comentário" : "comentários"}
+            </button>
+          )}
+          {visibleComments.map((c) => (
             <div key={c.id} className="flex items-start gap-2">
               <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-azul-suave text-[10px] font-bold text-azul-navy">
                 {initials(c.author_name)}
@@ -187,33 +204,44 @@ export function TimelinePostCard({
               </div>
             </div>
           ))}
+          {showAllComments && post.comments.length > VISIBLE && (
+            <button
+              onClick={() => setShowAllComments(false)}
+              className="flex items-center gap-1 text-xs font-medium text-slate-400 hover:underline"
+            >
+              ▲ Ver menos
+            </button>
+          )}
         </div>
       )}
 
-      {/* Campo de comentário com emojis */}
-      <form action={submitComment} className="border-t border-slate-100 p-3">
-        <input type="hidden" name="post_id" value={post.id} />
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <input
-              id={`comment-${post.id}`}
-              name="body"
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              autoComplete="off"
-              placeholder="Adicione um comentário…"
-              className="w-full rounded-full border border-slate-300 px-3 py-1.5 pr-9 text-sm outline-none focus:border-azul"
-            />
-            <EmojiInsert
-              onInsert={(e) => setComment((c) => c + e)}
-              className="absolute right-2 top-1/2 -translate-y-1/2"
-            />
+      {/* Campo de comentário (oculto até clicar em "Comentar") */}
+      {showCommentBox && (
+        <form action={submitComment} className="border-t border-slate-100 p-3">
+          <input type="hidden" name="post_id" value={post.id} />
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <input
+                id={`comment-${post.id}`}
+                name="body"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                autoComplete="off"
+                autoFocus
+                placeholder="Adicione um comentário…"
+                className="w-full rounded-full border border-slate-300 px-3 py-1.5 pr-9 text-sm outline-none focus:border-azul"
+              />
+              <EmojiInsert
+                onInsert={(e) => setComment((c) => c + e)}
+                className="absolute right-2 top-1/2 -translate-y-1/2"
+              />
+            </div>
+            <button className="text-sm font-semibold text-azul hover:text-azul-navy">
+              Publicar
+            </button>
           </div>
-          <button className="text-sm font-semibold text-azul hover:text-azul-navy">
-            Publicar
-          </button>
-        </div>
-      </form>
+        </form>
+      )}
     </article>
   );
 }
