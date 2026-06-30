@@ -124,9 +124,14 @@ export function StoryViewer({
             </span>
             <span className="text-sm font-semibold">{highlight.title}</span>
           </div>
-          <button onClick={onClose} className="text-2xl leading-none text-white/90 hover:text-white">
-            ✕
-          </button>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-white/80" title="Visualizações">
+              👁 {story?.view_count ?? 0}
+            </span>
+            <button onClick={onClose} className="text-2xl leading-none text-white/90 hover:text-white">
+              ✕
+            </button>
+          </div>
         </div>
 
         {/* Conteúdo do story */}

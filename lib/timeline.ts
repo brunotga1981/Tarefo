@@ -48,7 +48,8 @@ export async function listTimeline(
   >(
     `SELECT p.id, p.kind, p.author_id, p.author_name, p.body, p.image_url,
             p.course_id, t.title AS course_title, p.score, p.created_at,
-            p.publish_at, p.expires_at
+            p.publish_at, p.expires_at,
+            (SELECT count(*)::int FROM story_views v WHERE v.post_id = p.id) AS view_count
      FROM timeline_posts p
      LEFT JOIN trainings t ON t.id = p.course_id
      WHERE ${conds.join(" AND ")}
@@ -111,7 +112,8 @@ export async function getHighlightStories(
   if (hs.length === 0) return [];
   const rows = await query<Story & { highlight_id: string }>(
     `SELECT ph.highlight_id, p.id, p.body, p.image_url, p.author_name, p.created_at,
-            EXISTS (SELECT 1 FROM story_views v WHERE v.post_id = p.id AND v.user_id = $1) AS seen
+            EXISTS (SELECT 1 FROM story_views v WHERE v.post_id = p.id AND v.user_id = $1) AS seen,
+            (SELECT count(*)::int FROM story_views v2 WHERE v2.post_id = p.id) AS view_count
      FROM timeline_post_highlights ph
      JOIN timeline_posts p ON p.id = ph.post_id
      WHERE (p.publish_at IS NULL OR p.publish_at <= now())

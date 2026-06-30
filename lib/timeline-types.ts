@@ -20,6 +20,7 @@ export type TLPost = {
   publish_at: string | null;
   expires_at: string | null;
   status?: "AGENDADO" | "EXPIRADO" | null; // calculado para autor/moderador
+  view_count?: number;
   reactions: TLReaction[];
   comments: TLComment[];
 };
@@ -37,6 +38,7 @@ export type Story = {
   author_name: string;
   created_at: string;
   seen?: boolean;
+  view_count?: number;
 };
 export type HighlightWithStories = Highlight & { posts: Story[] };
 

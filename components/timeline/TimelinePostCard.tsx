@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { formatDateTime } from "@/lib/format";
 import { TL_REACTIONS, type TLPost } from "@/lib/timeline-types";
 import { EmojiInsert } from "@/components/EmojiInsert";
@@ -11,6 +11,7 @@ import {
   addTimelineCommentAction,
   deleteTimelinePostAction,
   updateTimelinePostAction,
+  markStoryViewedAction,
 } from "@/app/(app)/intranet/timeline/actions";
 
 function initials(name: string) {
@@ -34,6 +35,24 @@ export function TimelinePostCard({
   const [editBody, setEditBody] = useState(post.body ?? "");
   const isCert = post.kind === "CERTIFICATE";
   const totalReactions = post.reactions.reduce((s, r) => s + r.count, 0);
+  const articleRef = useRef<HTMLElement>(null);
+
+  // Conta a visualização quando o post entra na tela (uma vez por usuário)
+  useEffect(() => {
+    const el = articleRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          obs.disconnect();
+          void markStoryViewedAction(post.id);
+        }
+      },
+      { threshold: 0.5 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [post.id]);
 
   const VISIBLE = 2;
   const visibleComments = showAllComments
@@ -54,7 +73,10 @@ export function TimelinePostCard({
   }
 
   return (
-    <article className="mx-auto mb-6 max-w-lg overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+    <article
+      ref={articleRef}
+      className="mx-auto mb-6 max-w-lg overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+    >
       {/* Cabeçalho */}
       <div className="flex items-center justify-between p-3">
         <div className="flex items-center gap-2">
@@ -208,20 +230,21 @@ export function TimelinePostCard({
         )
       )}
 
-      {/* Resumo de reações e comentários */}
-      {(totalReactions > 0 || post.comments.length > 0) && (
-        <div className="flex items-center justify-between px-3 pt-2 text-xs text-slate-500">
-          <span className="flex items-center gap-1">
-            {post.reactions.slice(0, 3).map((r) => (
-              <span key={r.emoji}>{r.emoji}</span>
-            ))}
-            {totalReactions > 0 && <span>{totalReactions}</span>}
-          </span>
+      {/* Resumo de reações, comentários e visualizações */}
+      <div className="flex items-center justify-between px-3 pt-2 text-xs text-slate-500">
+        <span className="flex items-center gap-1">
+          {post.reactions.slice(0, 3).map((r) => (
+            <span key={r.emoji}>{r.emoji}</span>
+          ))}
+          {totalReactions > 0 && <span>{totalReactions}</span>}
+        </span>
+        <span className="flex items-center gap-3">
           {post.comments.length > 0 && (
             <span>{post.comments.length} comentários</span>
           )}
-        </div>
-      )}
+          <span title="Visualizações">👁 {post.view_count ?? 0}</span>
+        </span>
+      </div>
 
       {/* Barra de ações (estilo Facebook, com divisórias) */}
       <div className="mt-2 flex items-center border-y border-slate-100">
