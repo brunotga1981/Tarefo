@@ -8,7 +8,19 @@ export type Notifications = {
   treino: number; // treinamentos disponíveis ainda não aprovados
 };
 
+const ZERO: Notifications = { torpedo: 0, canal: 0, tarefa: 0, mt: 0, treino: 0 };
+
 export async function getNotifications(userId: string): Promise<Notifications> {
+  try {
+    return await computeNotifications(userId);
+  } catch (e) {
+    // Notificações são não essenciais: nunca devem derrubar o layout/app.
+    console.error("getNotifications falhou (ignorado):", e);
+    return ZERO;
+  }
+}
+
+async function computeNotifications(userId: string): Promise<Notifications> {
   const torpedo = await query<{ count: number }>(
     `SELECT count(*)::int AS count
      FROM messages m
