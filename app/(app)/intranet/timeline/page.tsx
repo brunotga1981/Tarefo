@@ -14,7 +14,7 @@ export default async function TimelinePage() {
   const canModerate = can(user, "blog.manage");
   const canHighlights = can(user, "highlights.manage");
 
-  const highlights = await getHighlightStories();
+  const highlights = await getHighlightStories(user.id);
   const posts = await listTimeline(user.id, { canModerate });
 
   return (

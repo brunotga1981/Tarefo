@@ -36,6 +36,7 @@ export type Story = {
   image_url: string | null;
   author_name: string;
   created_at: string;
+  seen?: boolean;
 };
 export type HighlightWithStories = Highlight & { posts: Story[] };
 

@@ -353,6 +353,13 @@ CREATE TABLE IF NOT EXISTS timeline_post_highlights (
   highlight_id text NOT NULL REFERENCES highlights(id) ON DELETE CASCADE,
   PRIMARY KEY (post_id, highlight_id)
 );
+-- Stories vistos (para marcar destaques como vistos, estilo Instagram)
+CREATE TABLE IF NOT EXISTS story_views (
+  user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  post_id text NOT NULL REFERENCES timeline_posts(id) ON DELETE CASCADE,
+  viewed_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, post_id)
+);
 
 -- Blog "Conheça Mais"
 CREATE TABLE IF NOT EXISTS blog_posts (

@@ -102,18 +102,22 @@ export async function listHighlights(): Promise<Highlight[]> {
 }
 
 /** Destaques com seus posts (somente posts ativos), para o visualizador de stories. */
-export async function getHighlightStories(): Promise<HighlightWithStories[]> {
+export async function getHighlightStories(
+  userId: string
+): Promise<HighlightWithStories[]> {
   const hs = await query<Highlight>(
     `SELECT id, title, image_url FROM highlights ORDER BY "order", created_at`
   );
   if (hs.length === 0) return [];
   const rows = await query<Story & { highlight_id: string }>(
-    `SELECT ph.highlight_id, p.id, p.body, p.image_url, p.author_name, p.created_at
+    `SELECT ph.highlight_id, p.id, p.body, p.image_url, p.author_name, p.created_at,
+            EXISTS (SELECT 1 FROM story_views v WHERE v.post_id = p.id AND v.user_id = $1) AS seen
      FROM timeline_post_highlights ph
      JOIN timeline_posts p ON p.id = ph.post_id
      WHERE (p.publish_at IS NULL OR p.publish_at <= now())
        AND (p.expires_at IS NULL OR p.expires_at > now())
-     ORDER BY p.created_at DESC`
+     ORDER BY p.created_at DESC`,
+    [userId]
   );
   return hs.map((h) => ({
     ...h,
@@ -121,6 +125,17 @@ export async function getHighlightStories(): Promise<HighlightWithStories[]> {
       .filter((r) => r.highlight_id === h.id)
       .map(({ highlight_id, ...s }) => s),
   }));
+}
+
+export async function markStoryViewed(
+  userId: string,
+  postId: string
+): Promise<void> {
+  await query(
+    `INSERT INTO story_views (user_id, post_id) VALUES ($1,$2)
+     ON CONFLICT DO NOTHING`,
+    [userId, postId]
+  );
 }
 
 export async function createHighlight(
@@ -135,6 +150,41 @@ export async function createHighlight(
 
 export async function deleteHighlight(id: string): Promise<void> {
   await query(`DELETE FROM highlights WHERE id=$1`, [id]);
+}
+
+/** Atualiza o título e, se uma nova imagem for informada, a imagem do destaque. */
+export async function updateHighlight(
+  id: string,
+  title: string,
+  imageUrl: string | null
+): Promise<void> {
+  if (imageUrl) {
+    await query(`UPDATE highlights SET title=$2, image_url=$3 WHERE id=$1`, [
+      id,
+      title,
+      imageUrl,
+    ]);
+  } else {
+    await query(`UPDATE highlights SET title=$2 WHERE id=$1`, [id, title]);
+  }
+}
+
+/** Move o destaque para a esquerda/direita, reordenando todos sequencialmente. */
+export async function moveHighlight(
+  id: string,
+  dir: "left" | "right"
+): Promise<void> {
+  const hs = await query<{ id: string }>(
+    `SELECT id FROM highlights ORDER BY "order", created_at`
+  );
+  const idx = hs.findIndex((h) => h.id === id);
+  if (idx < 0) return;
+  const j = dir === "left" ? idx - 1 : idx + 1;
+  if (j < 0 || j >= hs.length) return;
+  [hs[idx], hs[j]] = [hs[j], hs[idx]];
+  for (let i = 0; i < hs.length; i++) {
+    await query(`UPDATE highlights SET "order"=$2 WHERE id=$1`, [hs[i].id, i]);
+  }
 }
 
 export async function setPostHighlights(

@@ -8,6 +8,9 @@ import {
   setPostHighlights,
   createHighlight,
   deleteHighlight,
+  updateHighlight,
+  moveHighlight,
+  markStoryViewed,
 } from "@/lib/timeline";
 import { generatePostCopy, generatePostImage } from "@/lib/ai";
 
@@ -67,6 +70,34 @@ export async function deleteHighlightAction(fd: FormData) {
   if (!can(user, "highlights.manage")) throw new Error("Sem permissão.");
   await deleteHighlight(str(fd, "id"));
   revalidatePath("/intranet/timeline");
+}
+
+export async function updateHighlightAction(fd: FormData) {
+  const user = await getCurrentUser();
+  if (!can(user, "highlights.manage")) throw new Error("Sem permissão.");
+  const id = str(fd, "id");
+  const title = str(fd, "title");
+  if (!id || !title) return;
+  const imageUrl = await resolveFormImage(fd); // null se não enviou nova imagem
+  await updateHighlight(id, title, imageUrl);
+  revalidatePath("/intranet/timeline");
+}
+
+export async function moveHighlightAction(fd: FormData) {
+  const user = await getCurrentUser();
+  if (!can(user, "highlights.manage")) throw new Error("Sem permissão.");
+  const id = str(fd, "id");
+  const dir = str(fd, "dir") === "left" ? "left" : "right";
+  if (!id) return;
+  await moveHighlight(id, dir);
+  revalidatePath("/intranet/timeline");
+}
+
+// Marca um story (post) como visto pelo usuário atual.
+export async function markStoryViewedAction(postId: string) {
+  const user = await getCurrentUser();
+  if (!user || !postId) return;
+  await markStoryViewed(user.id, postId);
 }
 
 // Editar o próprio post (autor a qualquer momento) ou quem gerencia conteúdo.

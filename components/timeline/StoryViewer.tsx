@@ -2,7 +2,8 @@
 
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useState } from "react";
-import type { HighlightWithStories } from "@/lib/timeline-types";
+import { TL_REACTIONS, type HighlightWithStories } from "@/lib/timeline-types";
+import { toggleTimelineReactionAction } from "@/app/(app)/intranet/timeline/actions";
 
 const DURATION = 6000; // ms por story
 
@@ -10,18 +11,37 @@ export function StoryViewer({
   highlights,
   startIndex,
   onClose,
+  onView,
 }: {
   highlights: HighlightWithStories[];
   startIndex: number;
   onClose: () => void;
+  onView?: (postId: string) => void;
 }) {
   const [hi, setHi] = useState(startIndex); // índice do destaque
   const [si, setSi] = useState(0); // índice do story dentro do destaque
   const [progress, setProgress] = useState(0);
+  const [reacted, setReacted] = useState<string | null>(null);
 
   const highlight = highlights[hi];
   const stories = highlight?.posts ?? [];
   const story = stories[si];
+
+  // Marca como visto ao exibir cada story
+  useEffect(() => {
+    setReacted(null);
+    if (story && onView) onView(story.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hi, si]);
+
+  async function react(emoji: string) {
+    if (!story) return;
+    setReacted(emoji);
+    const fd = new FormData();
+    fd.set("post_id", story.id);
+    fd.set("emoji", emoji);
+    await toggleTimelineReactionAction(fd);
+  }
 
   function nextHighlight() {
     if (hi < highlights.length - 1) {
@@ -126,21 +146,37 @@ export function StoryViewer({
 
         {/* Legenda */}
         {story?.image_url && story?.body && (
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 pt-10 text-sm text-white">
+          <div className="absolute bottom-16 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 pt-10 text-sm text-white">
             <span className="font-semibold">{story.author_name}</span> {story.body}
           </div>
         )}
+
+        {/* Reações */}
+        <div className="absolute bottom-3 left-0 right-0 z-10 flex justify-center gap-3">
+          {TL_REACTIONS.map((e) => (
+            <button
+              key={e}
+              type="button"
+              onClick={() => react(e)}
+              className={`rounded-full px-2 py-1 text-2xl transition ${
+                reacted === e ? "scale-125 bg-white/20" : "hover:scale-110"
+              }`}
+            >
+              {e}
+            </button>
+          ))}
+        </div>
 
         {/* Zonas de toque (esquerda/direita) */}
         <button
           onClick={prev}
           aria-label="Anterior"
-          className="absolute bottom-0 left-0 top-0 w-1/3"
+          className="absolute bottom-16 left-0 top-14 w-1/3"
         />
         <button
           onClick={next}
           aria-label="Próximo"
-          className="absolute bottom-0 right-0 top-0 w-1/3"
+          className="absolute bottom-16 right-0 top-14 w-1/3"
         />
       </div>
     </div>
