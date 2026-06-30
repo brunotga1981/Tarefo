@@ -32,7 +32,10 @@ export async function query<T = any>(
   return res.rows as T[];
 }
 
-/** Garante que o schema existe (e dados de exemplo) — executa apenas uma vez. */
+/** Garante que o schema existe (e dados de exemplo) — executa apenas uma vez.
+ *  Se a inicialização falhar (ex.: hiccup de conexão no cold start do Render),
+ *  o cache é limpo para que a próxima requisição tente de novo, em vez de
+ *  deixar a aplicação travada em erro até um novo deploy. */
 export function ready(): Promise<void> {
   if (!globalForDb._ready) {
     globalForDb._ready = (async () => {
@@ -40,7 +43,10 @@ export function ready(): Promise<void> {
       await seedAccess();
       await reconcileAdminPermissions();
       await seedTasks();
-    })();
+    })().catch((e) => {
+      globalForDb._ready = undefined; // permite retry no próximo request
+      throw e;
+    });
   }
   return globalForDb._ready;
 }
@@ -49,17 +55,23 @@ export function ready(): Promise<void> {
  * Garante que o perfil Administrador sempre possua TODAS as permissões do
  * catálogo — inclusive as adicionadas após o banco já ter sido populado
  * (o seed só roda em banco novo). Roda em todo start, é idempotente.
+ * É um passo NÃO essencial: se falhar, não derruba a aplicação (o admin
+ * pode liberar permissões pela tela de Perfis).
  */
 async function reconcileAdminPermissions() {
-  await pool.query(
-    `INSERT INTO profile_permissions (profile_id, permission)
-     SELECT p.id, k.key
-       FROM profiles p
-       CROSS JOIN unnest($1::text[]) AS k(key)
-      WHERE p.name = 'Administrador'
-     ON CONFLICT (profile_id, permission) DO NOTHING`,
-    [ALL_PERMISSION_KEYS]
-  );
+  try {
+    await pool.query(
+      `INSERT INTO profile_permissions (profile_id, permission)
+       SELECT p.id, k.key
+         FROM profiles p
+         CROSS JOIN unnest($1::text[]) AS k(key)
+        WHERE p.name = 'Administrador'
+       ON CONFLICT (profile_id, permission) DO NOTHING`,
+      [ALL_PERMISSION_KEYS]
+    );
+  } catch (e) {
+    console.error("reconcileAdminPermissions falhou (ignorado):", e);
+  }
 }
 
 // Perfis de acesso, usuários (com senha) e grupos.
