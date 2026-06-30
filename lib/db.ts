@@ -38,10 +38,28 @@ export function ready(): Promise<void> {
     globalForDb._ready = (async () => {
       await pool.query(SCHEMA_SQL);
       await seedAccess();
+      await reconcileAdminPermissions();
       await seedTasks();
     })();
   }
   return globalForDb._ready;
+}
+
+/**
+ * Garante que o perfil Administrador sempre possua TODAS as permissões do
+ * catálogo — inclusive as adicionadas após o banco já ter sido populado
+ * (o seed só roda em banco novo). Roda em todo start, é idempotente.
+ */
+async function reconcileAdminPermissions() {
+  await pool.query(
+    `INSERT INTO profile_permissions (profile_id, permission)
+     SELECT p.id, k.key
+       FROM profiles p
+       CROSS JOIN unnest($1::text[]) AS k(key)
+      WHERE p.name = 'Administrador'
+     ON CONFLICT (profile_id, permission) DO NOTHING`,
+    [ALL_PERMISSION_KEYS]
+  );
 }
 
 // Perfis de acesso, usuários (com senha) e grupos.
