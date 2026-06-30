@@ -95,7 +95,18 @@ export async function generatePostImage(prompt: string): Promise<string> {
   const data = await res.json();
   const item = data?.data?.[0] ?? {};
   if (item.b64_json) return `data:image/png;base64,${item.b64_json}`;
-  if (item.url) return item.url as string;
+  if (item.url) {
+    // Alguns modelos (ex.: dall-e-3) retornam uma URL temporária; baixamos e
+    // convertemos em data URL para que a imagem persista no post.
+    try {
+      const img = await fetch(item.url as string);
+      const buf = Buffer.from(await img.arrayBuffer());
+      const ct = img.headers.get("content-type") || "image/png";
+      return `data:${ct};base64,${buf.toString("base64")}`;
+    } catch {
+      return item.url as string;
+    }
+  }
   throw new Error("A IA não retornou imagem.");
 }
 

@@ -10,6 +10,7 @@ import {
   toggleTimelineReactionAction,
   addTimelineCommentAction,
   deleteTimelinePostAction,
+  updateTimelinePostAction,
 } from "@/app/(app)/intranet/timeline/actions";
 
 function initials(name: string) {
@@ -29,6 +30,8 @@ export function TimelinePostCard({
   const [comment, setComment] = useState("");
   const [showAllComments, setShowAllComments] = useState(false);
   const [showCommentBox, setShowCommentBox] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editBody, setEditBody] = useState(post.body ?? "");
   const isCert = post.kind === "CERTIFICATE";
   const totalReactions = post.reactions.reduce((s, r) => s + r.count, 0);
 
@@ -42,6 +45,12 @@ export function TimelinePostCard({
     if (!comment.trim()) return;
     await addTimelineCommentAction(fd);
     setComment("");
+  }
+
+  async function submitEdit(fd: FormData) {
+    if (!editBody.trim()) return;
+    await updateTimelinePostAction(fd);
+    setEditing(false);
   }
 
   return (
@@ -62,20 +71,62 @@ export function TimelinePostCard({
           </div>
         </div>
         {canDelete && (
-          <form action={deleteTimelinePostAction}>
-            <input type="hidden" name="id" value={post.id} />
-            <button className="text-xs text-slate-400 hover:text-red-500">
-              excluir
-            </button>
-          </form>
+          <div className="flex items-center gap-3">
+            {!isCert && (
+              <button
+                onClick={() => {
+                  setEditBody(post.body ?? "");
+                  setEditing((v) => !v);
+                }}
+                className="text-xs text-slate-400 hover:text-azul"
+              >
+                editar
+              </button>
+            )}
+            <form action={deleteTimelinePostAction}>
+              <input type="hidden" name="id" value={post.id} />
+              <button className="text-xs text-slate-400 hover:text-red-500">
+                excluir
+              </button>
+            </form>
+          </div>
         )}
       </div>
 
       {/* Conteúdo (texto antes da imagem, estilo Facebook) */}
-      {!isCert && post.body && (
-        <p className="whitespace-pre-wrap px-3 pb-2 text-sm leading-relaxed text-slate-700">
-          {post.body}
-        </p>
+      {!isCert && editing ? (
+        <form action={submitEdit} className="px-3 pb-2">
+          <input type="hidden" name="id" value={post.id} />
+          <textarea
+            name="body"
+            value={editBody}
+            onChange={(e) => setEditBody(e.target.value)}
+            rows={3}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-azul"
+          />
+          <div className="mt-1 flex gap-2">
+            <button
+              disabled={!editBody.trim()}
+              className="rounded-lg bg-azul px-3 py-1 text-xs font-semibold text-white hover:bg-azul-navy disabled:opacity-50"
+            >
+              Salvar
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              className="text-xs text-slate-400 hover:text-slate-600"
+            >
+              cancelar
+            </button>
+          </div>
+        </form>
+      ) : (
+        !isCert &&
+        post.body && (
+          <p className="whitespace-pre-wrap px-3 pb-2 text-sm leading-relaxed text-slate-700">
+            {post.body}
+          </p>
+        )
       )}
 
       {/* Certificado ou imagem */}

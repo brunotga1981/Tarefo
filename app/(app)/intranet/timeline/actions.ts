@@ -19,12 +19,30 @@ export async function createTimelinePostAction(fd: FormData) {
   if (file instanceof File && file.size > 0) {
     imageUrl = (await saveUpload(file, "tl")).url;
   }
-  if (!body && !imageUrl) return;
+  if (!body) return; // texto é obrigatório
   await query(
     `INSERT INTO timeline_posts (kind, author_id, author_name, body, image_url)
      VALUES ('POST',$1,$2,$3,$4)`,
-    [user!.id, user!.name, body || null, imageUrl]
+    [user!.id, user!.name, body, imageUrl]
   );
+  revalidatePath("/intranet/timeline");
+}
+
+// Editar o próprio post (autor a qualquer momento) ou quem gerencia conteúdo.
+export async function updateTimelinePostAction(fd: FormData) {
+  const user = await getCurrentUser();
+  if (!user) return;
+  const id = str(fd, "id");
+  const body = str(fd, "body");
+  if (!id || !body) return;
+  if (can(user, "blog.manage")) {
+    await query(`UPDATE timeline_posts SET body=$2 WHERE id=$1`, [id, body]);
+  } else {
+    await query(
+      `UPDATE timeline_posts SET body=$2 WHERE id=$1 AND author_id=$3`,
+      [id, body, user.id]
+    );
+  }
   revalidatePath("/intranet/timeline");
 }
 

@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { useFormState } from "react-dom";
+/* eslint-disable @next/next/no-img-element */
+import { useEffect, useRef, useState } from "react";
+import { useFormState, useFormStatus } from "react-dom";
 import { EmojiInsert } from "@/components/EmojiInsert";
 import {
   createTimelinePostAction,
@@ -13,16 +14,25 @@ import {
 const field =
   "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-azul";
 
+// Botão de IA que mostra estado de processamento.
+function AiButton({ children }: { children: React.ReactNode }) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      disabled={pending}
+      className="rounded-lg bg-azul px-2 py-1 text-xs font-semibold text-white hover:bg-azul-navy disabled:opacity-60"
+    >
+      {pending ? "⏳ Gerando, aguarde…" : children}
+    </button>
+  );
+}
+
 export function TimelineComposer() {
   const [body, setBody] = useState("");
   const [topic, setTopic] = useState("");
+  const [image, setImage] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
 
-  async function publish(fd: FormData) {
-    await createTimelinePostAction(fd);
-    setBody("");
-    formRef.current?.reset(); // limpa upload/URL de imagem
-  }
   const [copyState, copyAction] = useFormState<AiPostState, FormData>(
     aiPostCopyAction,
     {}
@@ -31,6 +41,18 @@ export function TimelineComposer() {
     aiPostImageAction,
     {}
   );
+
+  // Quando a IA retorna uma imagem, anexa-a ao post.
+  useEffect(() => {
+    if (imgState.imageUrl) setImage(imgState.imageUrl);
+  }, [imgState.imageUrl]);
+
+  async function publish(fd: FormData) {
+    await createTimelinePostAction(fd);
+    setBody("");
+    setImage("");
+    formRef.current?.reset();
+  }
 
   return (
     <div className="mx-auto mb-6 max-w-lg rounded-xl border border-slate-200 bg-white p-4">
@@ -49,15 +71,11 @@ export function TimelineComposer() {
         <div className="mt-2 flex gap-2">
           <form action={copyAction}>
             <input type="hidden" name="topic" value={topic} />
-            <button className="rounded-lg bg-azul px-2 py-1 text-xs font-semibold text-white hover:bg-azul-navy">
-              ✍️ Gerar texto (IA)
-            </button>
+            <AiButton>✍️ Gerar texto (IA)</AiButton>
           </form>
           <form action={imgAction}>
             <input type="hidden" name="topic" value={topic} />
-            <button className="rounded-lg bg-azul px-2 py-1 text-xs font-semibold text-white hover:bg-azul-navy">
-              🎨 Gerar imagem (IA)
-            </button>
+            <AiButton>🎨 Gerar imagem (IA)</AiButton>
           </form>
         </div>
         {copyState.copy && (
@@ -86,6 +104,7 @@ export function TimelineComposer() {
             value={body}
             onChange={(e) => setBody(e.target.value)}
             rows={3}
+            required
             placeholder="Escreva a notícia/legenda…"
             className={`${field} pr-9`}
           />
@@ -94,14 +113,42 @@ export function TimelineComposer() {
             className="absolute right-2 top-2"
           />
         </div>
+
+        {/* Imagem gerada pela IA (anexada ao post) */}
+        {image && (
+          <div className="relative">
+            <img
+              src={image}
+              alt="Imagem gerada pela IA"
+              className="max-h-60 w-full rounded-lg object-cover"
+            />
+            <button
+              type="button"
+              onClick={() => setImage("")}
+              className="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-xs text-white"
+            >
+              remover
+            </button>
+          </div>
+        )}
+        <input type="hidden" name="image_url" value={image} />
+
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <label className="text-xs text-slate-500">
             Imagem (upload)
             <input type="file" name="image" accept="image/*" className={`${field} mt-1`} />
           </label>
-          <input name="image_url" placeholder="ou URL de imagem" className={field} />
+          <input
+            placeholder="ou URL de imagem"
+            value={image}
+            onChange={(e) => setImage(e.target.value)}
+            className={field}
+          />
         </div>
-        <button className="rounded-lg bg-azul-navy px-4 py-2 text-sm font-semibold text-white hover:bg-azul">
+        <button
+          disabled={!body.trim()}
+          className="rounded-lg bg-azul-navy px-4 py-2 text-sm font-semibold text-white hover:bg-azul disabled:opacity-50"
+        >
           Publicar
         </button>
       </form>
