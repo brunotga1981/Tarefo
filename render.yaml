@@ -23,6 +23,9 @@ services:
       # Segredo de assinatura da sessão (gerado automaticamente pelo Render).
       - key: SESSION_SECRET
         generateValue: true
+      # Token do endpoint de cron (/api/cron). Veja CRON_SETUP.md para agendar 00:00.
+      - key: CRON_SECRET
+        generateValue: true
 
 databases:
   - name: tarefo-db
