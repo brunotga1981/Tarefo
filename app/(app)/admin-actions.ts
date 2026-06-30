@@ -35,24 +35,97 @@ export async function createProjectAction(fd: FormData) {
 }
 
 // ---- Usuários ----
+function userFields(fd: FormData) {
+  return {
+    name: str(fd, "name"),
+    email: str(fd, "email"),
+    profileId: str(fd, "profile_id") || null,
+    birthDate: str(fd, "birth_date") || null,
+    team: str(fd, "team") || null,
+    ramal: str(fd, "ramal") || null,
+    phone: str(fd, "phone") || null,
+    workLocation: str(fd, "work_location") || null,
+    vertical: fd.getAll("vertical").map((v) => String(v)),
+  };
+}
+
 export async function createUserAction(fd: FormData) {
   await requirePerm("users.manage");
-  const name = str(fd, "name");
-  const email = str(fd, "email");
+  const f = userFields(fd);
   const password = str(fd, "password");
-  const profileId = str(fd, "profile_id") || null;
-  if (!name || !email || !password) return;
+  if (!f.name || !f.email || !password) return;
 
   const exists = await query(`SELECT 1 FROM users WHERE lower(email)=lower($1)`, [
-    email,
+    f.email,
   ]);
   if (exists.length) return;
 
   await query(
-    `INSERT INTO users (name, email, role, password_hash, profile_id)
-     VALUES ($1,$2,$3,$4,$5)`,
-    [name, email, "Membro", hashPassword(password), profileId]
+    `INSERT INTO users
+       (name, email, role, password_hash, profile_id, birth_date, team, vertical, ramal, phone, work_location)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+    [
+      f.name,
+      f.email,
+      "Membro",
+      hashPassword(password),
+      f.profileId,
+      f.birthDate,
+      f.team,
+      f.vertical,
+      f.ramal,
+      f.phone,
+      f.workLocation,
+    ]
   );
+  revalidatePath("/usuarios");
+}
+
+export async function updateUserAction(fd: FormData) {
+  await requirePerm("users.manage");
+  const id = str(fd, "id");
+  if (!id) return;
+  const f = userFields(fd);
+  if (!f.name || !f.email) return;
+  await query(
+    `UPDATE users SET
+       name=$2, email=$3, profile_id=$4, birth_date=$5, team=$6,
+       vertical=$7, ramal=$8, phone=$9, work_location=$10
+     WHERE id=$1`,
+    [
+      id,
+      f.name,
+      f.email,
+      f.profileId,
+      f.birthDate,
+      f.team,
+      f.vertical,
+      f.ramal,
+      f.phone,
+      f.workLocation,
+    ]
+  );
+  revalidatePath("/usuarios");
+}
+
+export async function resetUserPasswordAction(fd: FormData) {
+  await requirePerm("users.manage");
+  const id = str(fd, "id");
+  const password = str(fd, "password");
+  if (!id || password.length < 4) return;
+  await query(`UPDATE users SET password_hash=$2 WHERE id=$1`, [
+    id,
+    hashPassword(password),
+  ]);
+  revalidatePath("/usuarios");
+}
+
+export async function toggleUserActiveAction(fd: FormData) {
+  await requirePerm("users.manage");
+  const id = str(fd, "id");
+  const active = str(fd, "active") === "true";
+  if (!id) return;
+  await query(`UPDATE users SET active=$2 WHERE id=$1`, [id, active]);
   revalidatePath("/usuarios");
 }
 

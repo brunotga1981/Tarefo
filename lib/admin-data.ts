@@ -16,17 +16,28 @@ export async function listProjectsWithCounts() {
   );
 }
 
-export async function listUsersFull() {
-  return query<{
-    id: string;
-    name: string;
-    email: string;
-    profile_id: string | null;
-    profile_name: string | null;
-  }>(
-    `SELECT u.id, u.name, u.email, u.profile_id, p.name AS profile_name
+export type UserFull = {
+  id: string;
+  name: string;
+  email: string;
+  profile_id: string | null;
+  profile_name: string | null;
+  birth_date: string | null;
+  team: string | null;
+  vertical: string[];
+  ramal: string | null;
+  phone: string | null;
+  work_location: string | null;
+  active: boolean;
+};
+
+export async function listUsersFull(): Promise<UserFull[]> {
+  return query<UserFull>(
+    `SELECT u.id, u.name, u.email, u.profile_id, p.name AS profile_name,
+            u.birth_date, u.team, u.vertical, u.ramal, u.phone,
+            u.work_location, u.active
      FROM users u LEFT JOIN profiles p ON p.id = u.profile_id
-     ORDER BY u.name`
+     ORDER BY u.active DESC, u.name`
   );
 }
 

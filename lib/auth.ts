@@ -96,12 +96,17 @@ export async function authenticate(
   email: string,
   password: string
 ): Promise<string | null> {
-  const rows = await query<{ id: string; password_hash: string | null }>(
-    `SELECT id, password_hash FROM users WHERE lower(email) = lower($1)`,
+  const rows = await query<{
+    id: string;
+    password_hash: string | null;
+    active: boolean;
+  }>(
+    `SELECT id, password_hash, active FROM users WHERE lower(email) = lower($1)`,
     [email]
   );
   const u = rows[0];
   if (!u || !u.password_hash) return null;
+  if (u.active === false) return null; // usuário desativado não acessa
   if (!verifyPassword(password, u.password_hash)) return null;
   return u.id;
 }

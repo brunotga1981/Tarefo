@@ -201,6 +201,13 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS presence text NOT NULL DEFAULT 'Dispo
 ALTER TABLE users ADD COLUMN IF NOT EXISTS tasks_seen_at timestamptz;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS birth_date date;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS phone text;
+
+-- Cadastro completo de usuários
+ALTER TABLE users ADD COLUMN IF NOT EXISTS team text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS vertical text[] NOT NULL DEFAULT '{}';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS ramal text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS work_location text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS active boolean NOT NULL DEFAULT true;
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_url text;
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS file_name text;
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS forwarded_from text;
