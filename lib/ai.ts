@@ -3,6 +3,7 @@
 // tela "API" (ou via variável de ambiente ANTHROPIC_API_KEY).
 
 import { getSetting } from "./settings";
+import { storeImageBuffer } from "./images";
 
 export type GeneratedQuestion = {
   prompt: string;
@@ -94,15 +95,18 @@ export async function generatePostImage(prompt: string): Promise<string> {
   }
   const data = await res.json();
   const item = data?.data?.[0] ?? {};
-  if (item.b64_json) return `data:image/png;base64,${item.b64_json}`;
+  // Persiste a imagem no banco e retorna uma URL curta (/api/img/<id>), evitando
+  // trafegar data URLs gigantes pelos formulários (que estouram o limite do
+  // Server Action e truncam/cortam a imagem).
+  if (item.b64_json) {
+    return storeImageBuffer("image/png", Buffer.from(item.b64_json, "base64"));
+  }
   if (item.url) {
-    // Alguns modelos (ex.: dall-e-3) retornam uma URL temporária; baixamos e
-    // convertemos em data URL para que a imagem persista no post.
     try {
       const img = await fetch(item.url as string);
       const buf = Buffer.from(await img.arrayBuffer());
       const ct = img.headers.get("content-type") || "image/png";
-      return `data:${ct};base64,${buf.toString("base64")}`;
+      return storeImageBuffer(ct, buf);
     } catch {
       return item.url as string;
     }

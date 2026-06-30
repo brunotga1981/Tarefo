@@ -3,23 +3,35 @@
 import { revalidatePath } from "next/cache";
 import { query } from "@/lib/db";
 import { getCurrentUser, can } from "@/lib/auth";
-import { saveUpload } from "@/lib/upload";
+import { storeImageBuffer, storeDataUrl } from "@/lib/images";
 import { generatePostCopy, generatePostImage } from "@/lib/ai";
 
 function str(fd: FormData, k: string) {
   return String(fd.get(k) ?? "").trim();
 }
 
+/** Resolve a imagem do formulário para uma URL persistida (/api/img/<id>):
+ *  arquivo enviado → banco; data URL colada → banco; URL curta/externa → mantém. */
+async function resolveFormImage(fd: FormData): Promise<string | null> {
+  const file = fd.get("image");
+  if (file instanceof File && file.size > 0) {
+    return storeImageBuffer(
+      file.type || "image/png",
+      Buffer.from(await file.arrayBuffer())
+    );
+  }
+  const url = str(fd, "image_url");
+  if (!url) return null;
+  if (url.startsWith("data:")) return (await storeDataUrl(url)) ?? null;
+  return url;
+}
+
 export async function createTimelinePostAction(fd: FormData) {
   const user = await getCurrentUser();
   if (!can(user, "timeline.post")) throw new Error("Sem permissão para publicar.");
   const body = str(fd, "body");
-  let imageUrl = str(fd, "image_url") || null;
-  const file = fd.get("image");
-  if (file instanceof File && file.size > 0) {
-    imageUrl = (await saveUpload(file, "tl")).url;
-  }
   if (!body) return; // texto é obrigatório
+  const imageUrl = await resolveFormImage(fd);
   await query(
     `INSERT INTO timeline_posts (kind, author_id, author_name, body, image_url)
      VALUES ('POST',$1,$2,$3,$4)`,
@@ -41,10 +53,13 @@ export async function updateTimelinePostAction(fd: FormData) {
   let newImage: string | null | undefined = undefined;
   const file = fd.get("image");
   if (file instanceof File && file.size > 0) {
-    newImage = (await saveUpload(file, "tl")).url;
+    newImage = await storeImageBuffer(
+      file.type || "image/png",
+      Buffer.from(await file.arrayBuffer())
+    );
   } else {
     const url = str(fd, "image_url");
-    if (url) newImage = url;
+    if (url) newImage = url.startsWith("data:") ? (await storeDataUrl(url)) ?? null : url;
     else if (str(fd, "remove_image") === "1") newImage = null;
   }
 

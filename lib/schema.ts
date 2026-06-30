@@ -365,6 +365,14 @@ CREATE TABLE IF NOT EXISTS conversation_reads (
   PRIMARY KEY (conversation_id, user_id)
 );
 
+-- Imagens (geradas por IA ou enviadas) armazenadas no banco, servidas por /api/img/[id]
+CREATE TABLE IF NOT EXISTS images (
+  id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  mime text NOT NULL,
+  data bytea NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
 -- Configurações da aplicação (chaves de API das integrações, etc.)
 CREATE TABLE IF NOT EXISTS app_settings (
   key text PRIMARY KEY,
