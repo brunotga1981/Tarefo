@@ -88,7 +88,9 @@ export function TimelinePostCard({
           </p>
           {post.course_id && (
             <Link
-              href={`/treinamentos/${post.course_id}/certificado`}
+              href={`/treinamentos/${post.course_id}/certificado${
+                post.author_id ? `?user=${post.author_id}` : ""
+              }`}
               className="mt-3 inline-block rounded-lg bg-azul-navy px-3 py-1.5 text-xs font-semibold text-white hover:bg-azul"
             >
               Ver certificado

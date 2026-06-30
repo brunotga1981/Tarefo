@@ -3,27 +3,46 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { query } from "@/lib/db";
 import { getCourse, getCompletion } from "@/lib/lms";
 import { formatDate } from "@/lib/format";
 import { PrintClient } from "@/components/PrintClient";
 
 export default async function CertificadoPage({
   params,
+  searchParams,
 }: {
   params: { id: string };
+  searchParams: { user?: string };
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
   const course = await getCourse(params.id);
   if (!course) notFound();
-  const completion = await getCompletion(course.id, user.id);
+
+  // Certificado pode ser o do próprio usuário ou o de outra pessoa (ex.: link
+  // da Time Line). Qualquer usuário pode visualizar o certificado de quem concluiu.
+  const targetId = searchParams?.user || user.id;
+  const isOwn = targetId === user.id;
+  const completion = await getCompletion(course.id, targetId);
+
+  let achieverName = user.name;
+  if (!isOwn) {
+    const rows = await query<{ name: string }>(
+      `SELECT name FROM users WHERE id = $1`,
+      [targetId]
+    );
+    achieverName = rows[0]?.name ?? "Usuário";
+  }
 
   if (!completion || !completion.passed) {
     return (
       <div className="mx-auto max-w-lg text-center">
         <p className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-700">
-          Você precisa ser aprovado no quiz (≥ 70%) para emitir o certificado.
+          {isOwn
+            ? "Você precisa ser aprovado no quiz (≥ 70%) para emitir o certificado."
+            : "Certificado indisponível para este usuário."}
         </p>
         <Link
           href={`/treinamentos/${course.id}`}
@@ -61,7 +80,7 @@ export default async function CertificadoPage({
           Certificado de Conclusão
         </h1>
         <p className="mt-6 text-slate-600">Certificamos que</p>
-        <p className="mt-1 text-2xl font-bold text-slate-800">{user.name}</p>
+        <p className="mt-1 text-2xl font-bold text-slate-800">{achieverName}</p>
         <p className="mt-4 text-slate-600">
           concluiu com aproveitamento o treinamento
         </p>
