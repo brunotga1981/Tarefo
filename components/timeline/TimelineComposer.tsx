@@ -120,7 +120,7 @@ export function TimelineComposer() {
             <img
               src={image}
               alt="Imagem gerada pela IA"
-              className="max-h-60 w-full rounded-lg object-cover"
+              className="max-h-72 w-full rounded-lg bg-slate-50 object-contain"
             />
             <button
               type="button"

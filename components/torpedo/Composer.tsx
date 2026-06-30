@@ -1,9 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { EMOJIS } from "@/components/EmojiInsert";
 import { sendMessageAction } from "@/app/(app)/comunicacao/actions";
-
-const EMOJIS = ["😀", "😂", "👍", "🙏", "🎉", "❤️", "✅", "⚠️", "📌", "🔥"];
 
 export function Composer({
   conversationId,
@@ -125,7 +124,12 @@ export function Composer({
         <button type="button" onClick={() => wrap("*")} className="rounded px-1.5 italic hover:bg-slate-100">
           I
         </button>
-        <button type="button" onClick={() => setShowEmoji((v) => !v)} className="rounded px-1.5 hover:bg-slate-100">
+        <button
+          type="button"
+          onClick={() => setShowEmoji((v) => !v)}
+          className="rounded px-1.5 hover:bg-slate-100"
+          title="Emojis"
+        >
           😀
         </button>
         <label className="cursor-pointer rounded px-1.5 hover:bg-slate-100" title="Anexar arquivo">

@@ -111,7 +111,7 @@ export function TimelinePostCard({
               <img
                 src={post.image_url}
                 alt=""
-                className="max-h-40 w-full rounded-lg object-cover"
+                className="max-h-40 w-full rounded-lg bg-slate-50 object-contain"
               />
               <label className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
                 <input type="checkbox" name="remove_image" value="1" />
@@ -193,7 +193,7 @@ export function TimelinePostCard({
           <img
             src={post.image_url}
             alt=""
-            className="max-h-[28rem] w-full object-cover"
+            className="max-h-[32rem] w-full bg-slate-50 object-contain"
           />
         )
       )}
