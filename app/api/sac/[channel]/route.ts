@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createTicket } from "@/lib/sac";
+import { getSetting } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,7 @@ export async function POST(
     return NextResponse.json({ error: "Canal inválido" }, { status: 404 });
   }
 
-  const token = process.env.SAC_WEBHOOK_TOKEN;
+  const token = await getSetting("SAC_WEBHOOK_TOKEN");
   if (!token || req.headers.get("x-sac-token") !== token) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }

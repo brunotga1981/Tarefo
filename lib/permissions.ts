@@ -38,6 +38,11 @@ export const PERMISSIONS = [
     group: "Intranet",
   },
   { key: "sac.manage", label: "Atender o SAC", group: "SAC" },
+  {
+    key: "api.manage",
+    label: "Configurar chaves de API (integrações)",
+    group: "Administração",
+  },
 ] as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[number]["key"];

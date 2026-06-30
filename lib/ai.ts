@@ -1,5 +1,8 @@
 // Integração com a IA da Claude para gerar perguntas/respostas do quiz a partir
-// do conteúdo do treinamento. Ativa quando ANTHROPIC_API_KEY estiver definida.
+// do conteúdo do treinamento. Ativa quando a API Key estiver configurada na
+// tela "API" (ou via variável de ambiente ANTHROPIC_API_KEY).
+
+import { getSetting } from "./settings";
 
 export type GeneratedQuestion = {
   prompt: string;
@@ -7,19 +10,24 @@ export type GeneratedQuestion = {
   correct: number; // índice da correta (0-3)
 };
 
-export function aiEnabled(): boolean {
-  return !!process.env.ANTHROPIC_API_KEY;
+export async function aiEnabled(): Promise<boolean> {
+  return !!(await getSetting("ANTHROPIC_API_KEY"));
+}
+
+async function aiConfig() {
+  const key = await getSetting("ANTHROPIC_API_KEY");
+  const model = (await getSetting("ANTHROPIC_MODEL")) || "claude-sonnet-4-6";
+  const base = process.env.ANTHROPIC_API_URL || "https://api.anthropic.com";
+  return { key, model, base };
 }
 
 async function callClaude(prompt: string, maxTokens = 2000): Promise<string> {
-  const key = process.env.ANTHROPIC_API_KEY;
+  const { key, model, base } = await aiConfig();
   if (!key) {
     throw new Error(
-      "IA não configurada. Defina ANTHROPIC_API_KEY para usar os recursos de IA."
+      "IA não configurada. Defina a API Key da Claude na tela API para usar os recursos de IA."
     );
   }
-  const model = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
-  const base = process.env.ANTHROPIC_API_URL || "https://api.anthropic.com";
   const res = await fetch(`${base}/v1/messages`, {
     method: "POST",
     headers: {
@@ -80,14 +88,12 @@ export async function generateQuizWithAI(
   numQuestions: number,
   difficulty: string
 ): Promise<GeneratedQuestion[]> {
-  const key = process.env.ANTHROPIC_API_KEY;
+  const { key, model, base } = await aiConfig();
   if (!key) {
     throw new Error(
-      "IA não configurada. Defina ANTHROPIC_API_KEY para gerar o quiz automaticamente."
+      "IA não configurada. Defina a API Key da Claude na tela API para gerar o quiz automaticamente."
     );
   }
-  const model = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
-  const base = process.env.ANTHROPIC_API_URL || "https://api.anthropic.com";
 
   const prompt =
     `Você é um instrutor que cria avaliações. Com base no CONTEÚDO do treinamento abaixo, ` +

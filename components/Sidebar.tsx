@@ -37,6 +37,7 @@ const NAV: NavItem[] = [
   { label: "Usuários", href: "/usuarios", icon: "👥", perm: "users.manage" },
   { label: "Perfis", href: "/perfis", icon: "🔐", perm: "access.manage" },
   { label: "Grupos", href: "/grupos", icon: "👪", perm: "access.manage" },
+  { label: "API", href: "/api", icon: "🔑", perm: "api.manage" },
 ];
 
 const INTRANET: NavGroup = {

@@ -347,4 +347,11 @@ CREATE TABLE IF NOT EXISTS conversation_reads (
   last_read_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (conversation_id, user_id)
 );
+
+-- Configurações da aplicação (chaves de API das integrações, etc.)
+CREATE TABLE IF NOT EXISTS app_settings (
+  key text PRIMARY KEY,
+  value text,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
 `;
