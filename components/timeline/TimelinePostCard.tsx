@@ -193,7 +193,7 @@ export function TimelinePostCard({
           <img
             src={post.image_url}
             alt=""
-            className="max-h-[32rem] w-full bg-slate-50 object-contain"
+            className="h-auto w-full bg-slate-50"
           />
         )
       )}
