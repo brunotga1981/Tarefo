@@ -43,20 +43,33 @@ export default async function CalendarioPage({
     canViewAll ? [monthStart] : [monthStart, user.id]
   );
 
+  // Prazos de treinamentos (cursos com data limite no mês)
+  const trainings = await query<{ id: string; title: string; day: number }>(
+    `SELECT id, title, EXTRACT(DAY FROM deadline)::int AS day
+     FROM trainings
+     WHERE deadline >= $1::date AND deadline < ($1::date + interval '1 month')
+     ORDER BY deadline`,
+    [monthStart]
+  );
+
   const birthdays = await query<{ name: string; day: number }>(
     `SELECT name, EXTRACT(DAY FROM birth_date)::int AS day
-     FROM users WHERE birth_date IS NOT NULL
+     FROM users WHERE birth_date IS NOT NULL AND active
        AND EXTRACT(MONTH FROM birth_date)::int = $1`,
     [month]
   );
 
-  const byDay: Record<number, { tasks: string[]; birthdays: string[] }> = {};
-  for (const t of tasks) {
-    (byDay[t.day] ??= { tasks: [], birthdays: [] }).tasks.push(t.name);
-  }
-  for (const b of birthdays) {
-    (byDay[b.day] ??= { tasks: [], birthdays: [] }).birthdays.push(b.name);
-  }
+  type Item = { id?: string; name: string };
+  const byDay: Record<
+    number,
+    { tasks: Item[]; trainings: Item[]; birthdays: Item[] }
+  > = {};
+  const dayOf = (d: number) =>
+    (byDay[d] ??= { tasks: [], trainings: [], birthdays: [] });
+  for (const t of tasks) dayOf(t.day).tasks.push({ id: t.id, name: t.name });
+  for (const c of trainings)
+    dayOf(c.day).trainings.push({ id: c.id, name: c.title });
+  for (const b of birthdays) dayOf(b.day).birthdays.push({ name: b.name });
 
   const firstDow = new Date(year, month - 1, 1).getDay();
   const daysInMonth = new Date(year, month, 0).getDate();
@@ -83,6 +96,12 @@ export default async function CalendarioPage({
             ← Anterior
           </Link>
           <Link
+            href="/intranet/calendario"
+            className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:border-azul hover:text-azul"
+          >
+            Hoje
+          </Link>
+          <Link
             href={`/intranet/calendario?ym=${next}`}
             className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:border-azul hover:text-azul"
           >
@@ -94,6 +113,9 @@ export default async function CalendarioPage({
       <div className="mb-3 flex flex-wrap gap-4 text-xs text-slate-400">
         <span className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-full bg-azul" /> Tarefa (prazo)
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Treinamento (prazo)
         </span>
         <span className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-full bg-amber-400" /> Aniversário
@@ -124,23 +146,34 @@ export default async function CalendarioPage({
                     {d}
                   </div>
                   <div className="space-y-0.5">
-                    {byDay[d]?.birthdays.map((n, k) => (
+                    {byDay[d]?.birthdays.map((b, k) => (
                       <div
                         key={`b${k}`}
                         className="truncate rounded bg-amber-100 px-1 py-0.5 text-[10px] text-amber-700"
-                        title={`Aniversário: ${n}`}
+                        title={`Aniversário: ${b.name}`}
                       >
-                        🎂 {n}
+                        🎂 {b.name}
                       </div>
                     ))}
-                    {byDay[d]?.tasks.map((n, k) => (
-                      <div
-                        key={`t${k}`}
-                        className="truncate rounded bg-azul-suave/40 px-1 py-0.5 text-[10px] text-azul-navy"
-                        title={`Tarefa: ${n}`}
+                    {byDay[d]?.trainings.map((c, k) => (
+                      <Link
+                        key={`c${k}`}
+                        href={`/treinamentos/${c.id}`}
+                        className="block truncate rounded bg-emerald-100 px-1 py-0.5 text-[10px] text-emerald-700 hover:bg-emerald-200"
+                        title={`Treinamento (prazo): ${c.name}`}
                       >
-                        📋 {n}
-                      </div>
+                        🎓 {c.name}
+                      </Link>
+                    ))}
+                    {byDay[d]?.tasks.map((t, k) => (
+                      <Link
+                        key={`t${k}`}
+                        href={`/meu-tarefo/${t.id}`}
+                        className="block truncate rounded bg-azul-suave/40 px-1 py-0.5 text-[10px] text-azul-navy hover:bg-azul-suave/60"
+                        title={`Tarefa: ${t.name}`}
+                      >
+                        📋 {t.name}
+                      </Link>
                     ))}
                   </div>
                 </>
