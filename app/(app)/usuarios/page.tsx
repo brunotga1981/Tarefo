@@ -9,7 +9,8 @@ import {
 } from "@/lib/admin-data";
 import { NoAccess } from "@/components/NoAccess";
 import { ResetForm } from "@/components/tarefo/ResetForm";
-import { VERTICALS, WORK_LOCATIONS } from "@/lib/users-meta";
+import Link from "next/link";
+import { VERTICALS, TEAMS, WORK_LOCATIONS } from "@/lib/users-meta";
 import {
   createUserAction,
   updateUserAction,
@@ -74,7 +75,17 @@ function UserFields({
       </div>
       <div>
         <label className={label}>Equipe de trabalho</label>
-        <input name="team" defaultValue={u?.team ?? ""} className={field} />
+        <select name="team" defaultValue={u?.team ?? ""} className={field}>
+          <option value="">— Equipe —</option>
+          {TEAMS.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+          {u?.team && !TEAMS.includes(u.team as (typeof TEAMS)[number]) && (
+            <option value={u.team}>{u.team}</option>
+          )}
+        </select>
       </div>
       <div>
         <label className={label}>Número de ramal</label>
@@ -120,13 +131,24 @@ function UserFields({
   );
 }
 
-export default async function UsuariosPage() {
+export default async function UsuariosPage({
+  searchParams,
+}: {
+  searchParams: { status?: string };
+}) {
   const user = await getCurrentUser();
   if (!can(user, "users.manage")) return <NoAccess />;
-  const [users, profiles] = await Promise.all([
+  const [allUsers, profiles] = await Promise.all([
     listUsersFull(),
     listProfilesWithPerms(),
   ]);
+
+  const status = searchParams.status === "desativados" ? "desativados" : "ativos";
+  const activeCount = allUsers.filter((u) => u.active).length;
+  const inactiveCount = allUsers.length - activeCount;
+  const users = allUsers.filter((u) =>
+    status === "desativados" ? !u.active : u.active
+  );
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -163,8 +185,37 @@ export default async function UsuariosPage() {
         </ResetForm>
       </details>
 
+      {/* Filtro Ativos / Desativados */}
+      <div className="mb-4 flex gap-2">
+        <Link
+          href="/usuarios"
+          className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+            status === "ativos"
+              ? "border-azul bg-azul-suave/30 text-azul-navy"
+              : "border-slate-200 bg-white text-slate-500 hover:border-azul hover:text-azul"
+          }`}
+        >
+          Ativos ({activeCount})
+        </Link>
+        <Link
+          href="/usuarios?status=desativados"
+          className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+            status === "desativados"
+              ? "border-azul bg-azul-suave/30 text-azul-navy"
+              : "border-slate-200 bg-white text-slate-500 hover:border-azul hover:text-azul"
+          }`}
+        >
+          Desativados ({inactiveCount})
+        </Link>
+      </div>
+
       {/* Lista de usuários */}
       <div className="space-y-3">
+        {users.length === 0 && (
+          <p className="text-sm text-slate-400">
+            Nenhum usuário {status === "desativados" ? "desativado" : "ativo"}.
+          </p>
+        )}
         {users.map((u) => (
           <div
             key={u.id}

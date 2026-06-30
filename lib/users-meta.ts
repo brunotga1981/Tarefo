@@ -5,6 +5,18 @@ export const VERTICALS = [
   "Ayel",
   "Rede",
   "Soluções Prediais",
+  "PegLev",
+] as const;
+
+export const TEAMS = [
+  "Atendimento ao Síndico",
+  "Financeiro Condomínios",
+  "SAC",
+  "RH",
+  "DP",
+  "Gerências e Coordenação/Supervisão",
+  "Gestão Operacional",
+  "Soluções Prediais",
 ] as const;
 
 export const WORK_LOCATIONS = [
