@@ -2,6 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useState } from "react";
+import { formatDateTime } from "@/lib/format";
 import { TL_REACTIONS, type HighlightWithStories } from "@/lib/timeline-types";
 import {
   toggleTimelineReactionAction,
@@ -29,7 +30,9 @@ export function StoryViewer({
   const [si, setSi] = useState(0); // índice do story dentro do destaque
   const [progress, setProgress] = useState(0);
   const [reacted, setReacted] = useState<string | null>(null);
-  const [viewers, setViewers] = useState<{ name: string }[] | null>(null);
+  const [viewers, setViewers] = useState<
+    { name: string; viewed_at: string }[] | null
+  >(null);
 
   const highlight = highlights[hi];
   const stories = highlight?.posts ?? [];
@@ -198,8 +201,14 @@ export function StoryViewer({
               <p className="text-xs text-slate-400">Ninguém visualizou ainda.</p>
             )}
             {viewers.map((v, i) => (
-              <div key={i} className="py-0.5 text-slate-700">
-                {v.name}
+              <div
+                key={i}
+                className="flex items-center justify-between gap-2 py-0.5"
+              >
+                <span className="text-slate-700">{v.name}</span>
+                <span className="shrink-0 text-[11px] text-slate-400">
+                  {formatDateTime(v.viewed_at)}
+                </span>
               </div>
             ))}
           </div>
