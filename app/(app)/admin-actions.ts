@@ -35,6 +35,35 @@ export async function createProjectAction(fd: FormData) {
 }
 
 // ---- Usuários ----
+/** Vincula o usuário ao grupo cujo nome é a equipe escolhida (idempotente). */
+async function addToTeamGroup(userId: string, team: string | null) {
+  if (!team) return;
+  const g = await query<{ id: string }>(`SELECT id FROM groups WHERE name=$1`, [
+    team,
+  ]);
+  if (g[0]) {
+    await query(
+      `INSERT INTO group_members (group_id, user_id) VALUES ($1,$2)
+       ON CONFLICT DO NOTHING`,
+      [g[0].id, userId]
+    );
+  }
+}
+
+/** Remove o usuário do grupo correspondente a uma equipe. */
+async function removeFromTeamGroup(userId: string, team: string | null) {
+  if (!team) return;
+  const g = await query<{ id: string }>(`SELECT id FROM groups WHERE name=$1`, [
+    team,
+  ]);
+  if (g[0]) {
+    await query(
+      `DELETE FROM group_members WHERE group_id=$1 AND user_id=$2`,
+      [g[0].id, userId]
+    );
+  }
+}
+
 function userFields(fd: FormData) {
   return {
     name: str(fd, "name"),
@@ -60,10 +89,10 @@ export async function createUserAction(fd: FormData) {
   ]);
   if (exists.length) return;
 
-  await query(
+  const rows = await query<{ id: string }>(
     `INSERT INTO users
        (name, email, role, password_hash, profile_id, birth_date, team, vertical, ramal, phone, work_location)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
     [
       f.name,
       f.email,
@@ -78,7 +107,10 @@ export async function createUserAction(fd: FormData) {
       f.workLocation,
     ]
   );
+  // Vincula ao grupo da equipe escolhida
+  if (rows[0]) await addToTeamGroup(rows[0].id, f.team);
   revalidatePath("/usuarios");
+  revalidatePath("/grupos");
 }
 
 export async function updateUserAction(fd: FormData) {
@@ -87,6 +119,14 @@ export async function updateUserAction(fd: FormData) {
   if (!id) return;
   const f = userFields(fd);
   if (!f.name || !f.email) return;
+
+  // Equipe anterior, para ajustar o vínculo de grupo se mudou
+  const prev = await query<{ team: string | null }>(
+    `SELECT team FROM users WHERE id=$1`,
+    [id]
+  );
+  const oldTeam = prev[0]?.team ?? null;
+
   await query(
     `UPDATE users SET
        name=$2, email=$3, profile_id=$4, birth_date=$5, team=$6,
@@ -105,7 +145,14 @@ export async function updateUserAction(fd: FormData) {
       f.workLocation,
     ]
   );
+
+  // Se a equipe mudou, troca o vínculo de grupo (sem mexer em outros grupos)
+  if (oldTeam !== f.team) {
+    await removeFromTeamGroup(id, oldTeam);
+    await addToTeamGroup(id, f.team);
+  }
   revalidatePath("/usuarios");
+  revalidatePath("/grupos");
 }
 
 export async function resetUserPasswordAction(fd: FormData) {
