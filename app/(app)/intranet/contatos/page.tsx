@@ -1,7 +1,9 @@
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
 import { query } from "@/lib/db";
 import { PRESENCE_DOT } from "@/lib/chat";
+import { TEAMS, VERTICALS, WORK_LOCATIONS } from "@/lib/users-meta";
 
 type Contact = {
   id: string;
@@ -20,15 +22,49 @@ function initials(name: string) {
   return name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 }
 
-export default async function ContatosPage() {
+const sel =
+  "rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-azul";
+
+export default async function ContatosPage({
+  searchParams,
+}: {
+  searchParams: { local?: string; equipe?: string; vertical?: string };
+}) {
+  const local = WORK_LOCATIONS.includes(searchParams.local as any)
+    ? searchParams.local
+    : "";
+  const equipe = TEAMS.includes(searchParams.equipe as any)
+    ? searchParams.equipe
+    : "";
+  const vertical = VERTICALS.includes(searchParams.vertical as any)
+    ? searchParams.vertical
+    : "";
+
+  const conds = ["u.active"];
+  const args: any[] = [];
+  if (local) {
+    args.push(local);
+    conds.push(`u.work_location = $${args.length}`);
+  }
+  if (equipe) {
+    args.push(equipe);
+    conds.push(`u.team = $${args.length}`);
+  }
+  if (vertical) {
+    args.push(vertical);
+    conds.push(`$${args.length} = ANY(u.vertical)`);
+  }
+
   const contacts = await query<Contact>(
     `SELECT u.id, u.name, u.email, u.phone, u.ramal, u.team, u.work_location,
             u.vertical, COALESCE(u.presence,'Disponível') AS presence,
             p.name AS profile_name
      FROM users u LEFT JOIN profiles p ON p.id = u.profile_id
-     WHERE u.active
-     ORDER BY u.work_location NULLS LAST, u.name`
+     WHERE ${conds.join(" AND ")}
+     ORDER BY u.work_location NULLS LAST, u.name`,
+    args
   );
+  const hasFilter = !!(local || equipe || vertical);
 
   // Agrupa por local de trabalho
   const groups = new Map<string, Contact[]>();
@@ -41,14 +77,62 @@ export default async function ContatosPage() {
   return (
     <div className="mx-auto max-w-3xl">
       <h1 className="mb-1 text-2xl font-bold text-azul-navy">Contatos</h1>
-      <p className="mb-6 text-sm text-slate-500">
+      <p className="mb-4 text-sm text-slate-500">
         Lista de contatos da equipe — {contacts.length} pessoas.
       </p>
 
-      {Array.from(groups.entries()).map(([local, list]) => (
-        <section key={local} className="mb-6">
+      {/* Filtros */}
+      <form
+        method="get"
+        className="mb-6 flex flex-wrap items-end gap-2 rounded-xl border border-slate-200 bg-white p-3"
+      >
+        <select name="local" defaultValue={local} className={sel}>
+          <option value="">Local — todos</option>
+          {WORK_LOCATIONS.map((l) => (
+            <option key={l} value={l}>
+              {l}
+            </option>
+          ))}
+        </select>
+        <select name="equipe" defaultValue={equipe} className={sel}>
+          <option value="">Equipe — todas</option>
+          {TEAMS.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </select>
+        <select name="vertical" defaultValue={vertical} className={sel}>
+          <option value="">Vertical — todas</option>
+          {VERTICALS.map((v) => (
+            <option key={v} value={v}>
+              {v}
+            </option>
+          ))}
+        </select>
+        <button className="rounded-lg bg-azul px-4 py-2 text-sm font-semibold text-white hover:bg-azul-navy">
+          Filtrar
+        </button>
+        {hasFilter && (
+          <Link
+            href="/intranet/contatos"
+            className="px-2 py-2 text-sm text-slate-400 hover:text-azul"
+          >
+            limpar
+          </Link>
+        )}
+      </form>
+
+      {contacts.length === 0 && (
+        <p className="text-sm text-slate-400">
+          Nenhum contato com os filtros selecionados.
+        </p>
+      )}
+
+      {Array.from(groups.entries()).map(([loc, list]) => (
+        <section key={loc} className="mb-6">
           <h2 className="mb-2 text-sm font-semibold uppercase text-azul">
-            📍 {local}{" "}
+            📍 {loc}{" "}
             <span className="text-xs font-normal text-slate-400">
               ({list.length})
             </span>
@@ -110,10 +194,6 @@ export default async function ContatosPage() {
           </div>
         </section>
       ))}
-
-      {contacts.length === 0 && (
-        <p className="text-sm text-slate-400">Nenhum contato cadastrado.</p>
-      )}
     </div>
   );
 }
