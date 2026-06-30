@@ -29,20 +29,37 @@ export async function createTimelinePostAction(fd: FormData) {
 }
 
 // Editar o próprio post (autor a qualquer momento) ou quem gerencia conteúdo.
+// Permite alterar o texto e trocar/remover a imagem.
 export async function updateTimelinePostAction(fd: FormData) {
   const user = await getCurrentUser();
   if (!user) return;
   const id = str(fd, "id");
   const body = str(fd, "body");
   if (!id || !body) return;
-  if (can(user, "blog.manage")) {
-    await query(`UPDATE timeline_posts SET body=$2 WHERE id=$1`, [id, body]);
+
+  // Imagem: upload novo > URL informada > remover > manter (undefined)
+  let newImage: string | null | undefined = undefined;
+  const file = fd.get("image");
+  if (file instanceof File && file.size > 0) {
+    newImage = (await saveUpload(file, "tl")).url;
   } else {
-    await query(
-      `UPDATE timeline_posts SET body=$2 WHERE id=$1 AND author_id=$3`,
-      [id, body, user.id]
-    );
+    const url = str(fd, "image_url");
+    if (url) newImage = url;
+    else if (str(fd, "remove_image") === "1") newImage = null;
   }
+
+  const sets = ["body=$2"];
+  const args: any[] = [id, body];
+  if (newImage !== undefined) {
+    args.push(newImage);
+    sets.push(`image_url=$${args.length}`);
+  }
+  let sql = `UPDATE timeline_posts SET ${sets.join(", ")} WHERE id=$1`;
+  if (!can(user, "blog.manage")) {
+    args.push(user.id);
+    sql += ` AND author_id=$${args.length}`;
+  }
+  await query(sql, args);
   revalidatePath("/intranet/timeline");
 }
 

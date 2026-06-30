@@ -104,6 +104,38 @@ export function TimelinePostCard({
             rows={3}
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-azul"
           />
+
+          {/* Imagem do post */}
+          {post.image_url && (
+            <div className="mt-2">
+              <img
+                src={post.image_url}
+                alt=""
+                className="max-h-40 w-full rounded-lg object-cover"
+              />
+              <label className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
+                <input type="checkbox" name="remove_image" value="1" />
+                Remover imagem atual
+              </label>
+            </div>
+          )}
+          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <label className="text-xs text-slate-500">
+              Trocar imagem (upload)
+              <input
+                type="file"
+                name="image"
+                accept="image/*"
+                className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1 text-xs"
+              />
+            </label>
+            <input
+              name="image_url"
+              placeholder="ou URL de imagem"
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-azul"
+            />
+          </div>
+
           <div className="mt-1 flex gap-2">
             <button
               disabled={!editBody.trim()}
