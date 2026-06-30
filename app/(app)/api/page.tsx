@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { getCurrentUser, can } from "@/lib/auth";
 import { NoAccess } from "@/components/NoAccess";
 import { SETTING_GROUPS, getStoredSettings } from "@/lib/settings";
+import { ApiTestButton } from "@/components/ApiTestButton";
 import { saveApiKeysAction } from "./actions";
 
 const field =
@@ -76,6 +77,11 @@ export default async function ApiPage() {
                 );
               })}
             </div>
+
+            <ApiTestButton
+              groupId={g.id}
+              fieldKeys={g.fields.map((f) => f.key)}
+            />
           </section>
         ))}
 
