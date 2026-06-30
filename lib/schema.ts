@@ -340,6 +340,10 @@ CREATE TABLE IF NOT EXISTS timeline_comments (
 ALTER TABLE timeline_posts ADD COLUMN IF NOT EXISTS publish_at timestamptz;
 ALTER TABLE timeline_posts ADD COLUMN IF NOT EXISTS expires_at timestamptz;
 
+-- Tipo de mídia (image | video) e número sequencial automático da postagem
+ALTER TABLE timeline_posts ADD COLUMN IF NOT EXISTS media_type text NOT NULL DEFAULT 'image';
+ALTER TABLE timeline_posts ADD COLUMN IF NOT EXISTS seq bigserial;
+
 -- Destaques (stories fixos estilo Instagram) da Time Line
 CREATE TABLE IF NOT EXISTS highlights (
   id text PRIMARY KEY DEFAULT gen_random_uuid()::text,

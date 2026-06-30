@@ -22,7 +22,12 @@ export function TimelineComposer({ highlights }: { highlights: Highlight[] }) {
   const [imgLoading, setImgLoading] = useState(false);
   const [aiError, setAiError] = useState("");
   const [publishing, setPublishing] = useState(false);
+  const [isVideo, setIsVideo] = useState(false);
+  const publishingRef = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
+
+  const looksLikeVideo = (s: string) =>
+    s.startsWith("data:video") || /\.(mp4|webm|ogg|ogv|mov|m4v)(\?|#|$)/i.test(s);
 
   async function genCopy() {
     if (!topic.trim()) return setAiError("Informe um tema para a IA.");
@@ -50,16 +55,24 @@ export function TimelineComposer({ highlights }: { highlights: Highlight[] }) {
 
   async function publish(fd: FormData) {
     if (!body.trim()) return;
+    // Trava síncrona contra cliques repetidos (evita publicação duplicada)
+    if (publishingRef.current) return;
+    publishingRef.current = true;
     setPublishing(true);
-    await createTimelinePostAction(fd);
-    setPublishing(false);
-    // Limpa o formulário para uma nova postagem
-    setBody("");
-    setTopic("");
-    setImage("");
-    setCopy("");
-    setAiError("");
-    formRef.current?.reset();
+    try {
+      await createTimelinePostAction(fd);
+      // Limpa o formulário para uma nova postagem
+      setBody("");
+      setTopic("");
+      setImage("");
+      setIsVideo(false);
+      setCopy("");
+      setAiError("");
+      formRef.current?.reset();
+    } finally {
+      setPublishing(false);
+      publishingRef.current = false;
+    }
   }
 
   return (
@@ -139,17 +152,28 @@ export function TimelineComposer({ highlights }: { highlights: Highlight[] }) {
           />
         </div>
 
-        {/* Imagem anexada */}
+        {/* Mídia anexada (imagem ou vídeo) */}
         {image && (
           <div className="relative">
-            <img
-              src={image}
-              alt="Imagem da publicação"
-              className="max-h-72 w-full rounded-lg bg-slate-50 object-contain"
-            />
+            {isVideo || looksLikeVideo(image) ? (
+              <video
+                src={image}
+                controls
+                className="max-h-72 w-full rounded-lg bg-black object-contain"
+              />
+            ) : (
+              <img
+                src={image}
+                alt="Mídia da publicação"
+                className="max-h-72 w-full rounded-lg bg-slate-50 object-contain"
+              />
+            )}
             <button
               type="button"
-              onClick={() => setImage("")}
+              onClick={() => {
+                setImage("");
+                setIsVideo(false);
+              }}
               className="absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-xs text-white"
             >
               remover
@@ -160,13 +184,26 @@ export function TimelineComposer({ highlights }: { highlights: Highlight[] }) {
 
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <label className="text-xs text-slate-500">
-            Imagem (upload)
-            <input type="file" name="image" accept="image/*" className={`${field} mt-1`} />
+            Imagem ou vídeo (upload)
+            <input
+              type="file"
+              name="image"
+              accept="image/*,video/*"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                setIsVideo(!!f && f.type.startsWith("video/"));
+                if (f) setImage(""); // usa o arquivo enviado, não a URL
+              }}
+              className={`${field} mt-1`}
+            />
           </label>
           <input
-            placeholder="ou URL de imagem"
+            placeholder="ou URL de imagem/vídeo"
             value={image}
-            onChange={(e) => setImage(e.target.value)}
+            onChange={(e) => {
+              setImage(e.target.value);
+              setIsVideo(looksLikeVideo(e.target.value));
+            }}
             className={field}
           />
         </div>
@@ -218,12 +255,22 @@ export function TimelineComposer({ highlights }: { highlights: Highlight[] }) {
           </div>
         )}
 
-        <button
-          disabled={!body.trim() || publishing}
-          className="rounded-lg bg-azul-navy px-4 py-2 text-sm font-semibold text-white hover:bg-azul disabled:opacity-50"
-        >
-          {publishing ? "Publicando…" : "Publicar"}
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            disabled={!body.trim() || publishing}
+            className="inline-flex items-center gap-2 rounded-lg bg-azul-navy px-4 py-2 text-sm font-semibold text-white hover:bg-azul disabled:opacity-50"
+          >
+            {publishing && (
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+            )}
+            {publishing ? "Publicando…" : "Publicar"}
+          </button>
+          {publishing && (
+            <span className="text-xs text-slate-500">
+              ⏳ Em processamento, aguarde…
+            </span>
+          )}
+        </div>
       </form>
     </div>
   );

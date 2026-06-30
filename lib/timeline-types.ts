@@ -13,6 +13,8 @@ export type TLPost = {
   author_name: string;
   body: string | null;
   image_url: string | null;
+  media_type?: string; // 'image' | 'video'
+  seq?: number; // número sequencial automático da postagem
   course_id: string | null;
   course_title?: string | null;
   score: number | null;
@@ -35,6 +37,7 @@ export type Story = {
   id: string;
   body: string | null;
   image_url: string | null;
+  media_type?: string; // 'image' | 'video'
   author_name: string;
   author_id: string | null;
   created_at: string;

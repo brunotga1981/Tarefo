@@ -47,6 +47,7 @@ export async function listTimeline(
     Omit<TLPost, "reactions" | "comments" | "status">
   >(
     `SELECT p.id, p.kind, p.author_id, p.author_name, p.body, p.image_url,
+            p.media_type, p.seq,
             p.course_id, t.title AS course_title, p.score, p.created_at,
             p.publish_at, p.expires_at,
             (SELECT count(*)::int FROM story_views v
@@ -113,7 +114,7 @@ export async function getHighlightStories(
   );
   if (hs.length === 0) return [];
   const rows = await query<Story & { highlight_id: string }>(
-    `SELECT ph.highlight_id, p.id, p.body, p.image_url, p.author_name, p.author_id, p.created_at,
+    `SELECT ph.highlight_id, p.id, p.body, p.image_url, p.media_type, p.author_name, p.author_id, p.created_at,
             EXISTS (SELECT 1 FROM story_views v WHERE v.post_id = p.id AND v.user_id = $1) AS seen,
             (SELECT count(*)::int FROM story_views v2
               WHERE v2.post_id = p.id

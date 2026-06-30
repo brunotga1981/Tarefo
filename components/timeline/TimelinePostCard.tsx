@@ -18,6 +18,26 @@ function initials(name: string) {
   return name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 }
 
+/** Legenda: primeira linha em CAIXA ALTA e negrito (título); restante normal. */
+function Caption({ text }: { text: string }) {
+  const trimmed = text.replace(/^\n+/, "");
+  const nl = trimmed.indexOf("\n");
+  const title = nl === -1 ? trimmed : trimmed.slice(0, nl);
+  const rest = nl === -1 ? "" : trimmed.slice(nl + 1);
+  return (
+    <div className="px-3 pb-2 pt-2">
+      <p className="text-sm font-bold uppercase leading-snug text-slate-800">
+        {title}
+      </p>
+      {rest.trim() && (
+        <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
+          {rest}
+        </p>
+      )}
+    </div>
+  );
+}
+
 /** Converte um timestamp para o valor de <input datetime-local> em horário BRT. */
 function toLocalInput(value?: string | null): string {
   if (!value) return "";
@@ -116,6 +136,11 @@ export function TimelinePostCard({
             </p>
             <p className="text-[11px] text-slate-400">
               {formatDateTime(post.created_at)}
+              {post.seq != null && (
+                <span className="ml-1.5 text-slate-300" title="Número da postagem">
+                  #{post.seq}
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -142,8 +167,8 @@ export function TimelinePostCard({
         )}
       </div>
 
-      {/* Conteúdo (texto antes da imagem, estilo Facebook) */}
-      {!isCert && editing ? (
+      {/* Edição do post (a legenda em si fica abaixo da mídia) */}
+      {!isCert && editing && (
         <form action={submitEdit} className="px-3 pb-2">
           <input type="hidden" name="id" value={post.id} />
           <textarea
@@ -154,33 +179,41 @@ export function TimelinePostCard({
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-azul"
           />
 
-          {/* Imagem do post */}
+          {/* Mídia do post (imagem ou vídeo) */}
           {post.image_url && (
             <div className="mt-2">
-              <img
-                src={post.image_url}
-                alt=""
-                className="max-h-40 w-full rounded-lg bg-slate-50 object-contain"
-              />
+              {post.media_type === "video" ? (
+                <video
+                  src={post.image_url}
+                  controls
+                  className="max-h-40 w-full rounded-lg bg-black object-contain"
+                />
+              ) : (
+                <img
+                  src={post.image_url}
+                  alt=""
+                  className="max-h-40 w-full rounded-lg bg-slate-50 object-contain"
+                />
+              )}
               <label className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
                 <input type="checkbox" name="remove_image" value="1" />
-                Remover imagem atual
+                Remover mídia atual
               </label>
             </div>
           )}
           <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
             <label className="text-xs text-slate-500">
-              Trocar imagem (upload)
+              Trocar imagem/vídeo (upload)
               <input
                 type="file"
                 name="image"
-                accept="image/*"
+                accept="image/*,video/*"
                 className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-1 text-xs"
               />
             </label>
             <input
               name="image_url"
-              placeholder="ou URL de imagem"
+              placeholder="ou URL de imagem/vídeo"
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-azul"
             />
           </div>
@@ -231,16 +264,9 @@ export function TimelinePostCard({
             </button>
           </div>
         </form>
-      ) : (
-        !isCert &&
-        post.body && (
-          <p className="whitespace-pre-wrap px-3 pb-2 text-sm leading-relaxed text-slate-700">
-            {post.body}
-          </p>
-        )
       )}
 
-      {/* Certificado ou imagem */}
+      {/* Certificado ou mídia (imagem/vídeo) */}
       {isCert ? (
         <div className="mx-3 mb-2 rounded-xl border-2 border-azul-navy bg-azul-bg/40 p-5 text-center">
           <div className="text-3xl">🎓</div>
@@ -268,14 +294,21 @@ export function TimelinePostCard({
           )}
         </div>
       ) : (
-        post.image_url && (
-          <img
+        post.image_url &&
+        (post.media_type === "video" ? (
+          <video
             src={post.image_url}
-            alt=""
-            className="h-auto w-full bg-slate-50"
+            controls
+            playsInline
+            className="h-auto w-full bg-black"
           />
-        )
+        ) : (
+          <img src={post.image_url} alt="" className="h-auto w-full bg-slate-50" />
+        ))
       )}
+
+      {/* Legenda — sempre abaixo da mídia; título em caixa alta e negrito */}
+      {!isCert && !editing && post.body && <Caption text={post.body} />}
 
       {/* Resumo de reações, comentários e visualizações */}
       <div className="flex items-center justify-between px-3 pt-2 text-xs text-slate-500">

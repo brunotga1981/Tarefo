@@ -171,7 +171,16 @@ export function StoryViewer({
 
         {/* Conteúdo do story */}
         <div className="flex flex-1 items-center justify-center">
-          {story?.image_url ? (
+          {story?.image_url && story?.media_type === "video" ? (
+            <video
+              src={story.image_url}
+              autoPlay
+              muted
+              playsInline
+              controls
+              className="max-h-full max-w-full object-contain"
+            />
+          ) : story?.image_url ? (
             <img
               src={story.image_url}
               alt=""

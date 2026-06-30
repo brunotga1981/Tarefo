@@ -19,20 +19,35 @@ function str(fd: FormData, k: string) {
   return String(fd.get(k) ?? "").trim();
 }
 
-/** Resolve a imagem do formulário para uma URL persistida (/api/img/<id>):
+/** Resolve a mídia do formulário para uma URL persistida (/api/img/<id>) e detecta
+ *  se é imagem ou vídeo:
  *  arquivo enviado → banco; data URL colada → banco; URL curta/externa → mantém. */
-async function resolveFormImage(fd: FormData): Promise<string | null> {
+async function resolveFormMedia(
+  fd: FormData
+): Promise<{ url: string | null; type: "image" | "video" }> {
   const file = fd.get("image");
   if (file instanceof File && file.size > 0) {
-    return storeImageBuffer(
-      file.type || "image/png",
-      Buffer.from(await file.arrayBuffer())
-    );
+    const mime = file.type || "image/png";
+    const url = await storeImageBuffer(mime, Buffer.from(await file.arrayBuffer()));
+    return { url, type: mime.startsWith("video/") ? "video" : "image" };
   }
   const url = str(fd, "image_url");
-  if (!url) return null;
-  if (url.startsWith("data:")) return (await storeDataUrl(url)) ?? null;
-  return url;
+  if (!url) return { url: null, type: "image" };
+  if (url.startsWith("data:")) {
+    return {
+      url: (await storeDataUrl(url)) ?? null,
+      type: url.startsWith("data:video") ? "video" : "image",
+    };
+  }
+  return {
+    url,
+    type: /\.(mp4|webm|ogg|ogv|mov|m4v)(\?|#|$)/i.test(url) ? "video" : "image",
+  };
+}
+
+/** Mantém compatibilidade: resolve apenas a URL (usado pelos destaques). */
+async function resolveFormImage(fd: FormData): Promise<string | null> {
+  return (await resolveFormMedia(fd)).url;
 }
 
 export async function createTimelinePostAction(fd: FormData) {
@@ -40,17 +55,17 @@ export async function createTimelinePostAction(fd: FormData) {
   if (!can(user, "timeline.post")) throw new Error("Sem permissão para publicar.");
   const body = str(fd, "body");
   if (!body) return; // texto é obrigatório
-  const imageUrl = await resolveFormImage(fd);
+  const { url: imageUrl, type: mediaType } = await resolveFormMedia(fd);
   const publishAt = str(fd, "publish_at") || null;
   const expiresAt = str(fd, "expires_at") || null;
   // O datetime-local vem como hora local (BRT) sem fuso; interpretamos como
   // America/Sao_Paulo para gravar o instante correto (a sessão do banco é UTC).
   const rows = await query<{ id: string }>(
-    `INSERT INTO timeline_posts (kind, author_id, author_name, body, image_url, publish_at, expires_at)
-     VALUES ('POST',$1,$2,$3,$4,
-             $5::timestamp AT TIME ZONE 'America/Sao_Paulo',
-             $6::timestamp AT TIME ZONE 'America/Sao_Paulo') RETURNING id`,
-    [user!.id, user!.name, body, imageUrl, publishAt, expiresAt]
+    `INSERT INTO timeline_posts (kind, author_id, author_name, body, image_url, media_type, publish_at, expires_at)
+     VALUES ('POST',$1,$2,$3,$4,$5,
+             $6::timestamp AT TIME ZONE 'America/Sao_Paulo',
+             $7::timestamp AT TIME ZONE 'America/Sao_Paulo') RETURNING id`,
+    [user!.id, user!.name, body, imageUrl, mediaType, publishAt, expiresAt]
   );
   const highlightIds = fd.getAll("highlight_ids").map(String).filter(Boolean);
   if (rows[0] && highlightIds.length) {
@@ -129,18 +144,25 @@ export async function updateTimelinePostAction(fd: FormData) {
   const body = str(fd, "body");
   if (!id || !body) return;
 
-  // Imagem: upload novo > URL informada > remover > manter (undefined)
+  // Mídia: upload novo > URL informada > remover > manter (undefined)
   let newImage: string | null | undefined = undefined;
+  let newMediaType: "image" | "video" | undefined = undefined;
   const file = fd.get("image");
   if (file instanceof File && file.size > 0) {
-    newImage = await storeImageBuffer(
-      file.type || "image/png",
-      Buffer.from(await file.arrayBuffer())
-    );
+    const mime = file.type || "image/png";
+    newImage = await storeImageBuffer(mime, Buffer.from(await file.arrayBuffer()));
+    newMediaType = mime.startsWith("video/") ? "video" : "image";
   } else {
     const url = str(fd, "image_url");
-    if (url) newImage = url.startsWith("data:") ? (await storeDataUrl(url)) ?? null : url;
-    else if (str(fd, "remove_image") === "1") newImage = null;
+    if (url) {
+      newImage = url.startsWith("data:") ? (await storeDataUrl(url)) ?? null : url;
+      newMediaType = /^data:video|\.(mp4|webm|ogg|ogv|mov|m4v)(\?|#|$)/i.test(url)
+        ? "video"
+        : "image";
+    } else if (str(fd, "remove_image") === "1") {
+      newImage = null;
+      newMediaType = "image";
+    }
   }
 
   const sets = ["body=$2"];
@@ -148,6 +170,8 @@ export async function updateTimelinePostAction(fd: FormData) {
   if (newImage !== undefined) {
     args.push(newImage);
     sets.push(`image_url=$${args.length}`);
+    args.push(newMediaType ?? "image");
+    sets.push(`media_type=$${args.length}`);
   }
   // Agendamento (início/fim) — interpretado como America/Sao_Paulo; vazio = limpar
   args.push(str(fd, "publish_at") || null);

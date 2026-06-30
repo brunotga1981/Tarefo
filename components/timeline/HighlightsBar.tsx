@@ -65,8 +65,8 @@ export function HighlightsBar({
                   !has
                     ? "border-slate-200"
                     : unseen
-                      ? "border-azul"
-                      : "border-slate-300"
+                      ? "border-green-500 ring-2 ring-green-500/40"
+                      : "border-green-300"
                 }`}
               >
                 {h.image_url ? (
