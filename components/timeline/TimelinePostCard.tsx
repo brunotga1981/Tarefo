@@ -15,6 +15,11 @@ function initials(name: string) {
   return name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 }
 
+const EMOJIS = [
+  "😀", "😂", "😍", "🥰", "😎", "🤔", "👍", "👏",
+  "🙌", "🎉", "❤️", "🔥", "💡", "🙏", "😢", "😮",
+];
+
 export function TimelinePostCard({
   post,
   userId,
@@ -25,14 +30,24 @@ export function TimelinePostCard({
   canDelete: boolean;
 }) {
   const [showReact, setShowReact] = useState(false);
+  const [comment, setComment] = useState("");
+  const [showEmoji, setShowEmoji] = useState(false);
   const isCert = post.kind === "CERTIFICATE";
+  const totalReactions = post.reactions.reduce((s, r) => s + r.count, 0);
+
+  async function submitComment(fd: FormData) {
+    if (!comment.trim()) return;
+    await addTimelineCommentAction(fd);
+    setComment("");
+    setShowEmoji(false);
+  }
 
   return (
-    <article className="mx-auto mb-6 max-w-lg overflow-hidden rounded-xl border border-slate-200 bg-white">
+    <article className="mx-auto mb-6 max-w-lg overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       {/* Cabeçalho */}
       <div className="flex items-center justify-between p-3">
         <div className="flex items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-azul-suave text-xs font-bold text-azul-navy">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-azul-suave text-xs font-bold text-azul-navy">
             {initials(post.author_name)}
           </span>
           <div className="leading-tight">
@@ -54,7 +69,14 @@ export function TimelinePostCard({
         )}
       </div>
 
-      {/* Certificado */}
+      {/* Conteúdo (texto antes da imagem, estilo Facebook) */}
+      {!isCert && post.body && (
+        <p className="whitespace-pre-wrap px-3 pb-2 text-sm leading-relaxed text-slate-700">
+          {post.body}
+        </p>
+      )}
+
+      {/* Certificado ou imagem */}
       {isCert ? (
         <div className="mx-3 mb-2 rounded-xl border-2 border-azul-navy bg-azul-bg/40 p-5 text-center">
           <div className="text-3xl">🎓</div>
@@ -89,22 +111,39 @@ export function TimelinePostCard({
         )
       )}
 
-      {/* Ações */}
-      <div className="flex items-center gap-2 px-3 pt-2">
+      {/* Resumo de reações e comentários */}
+      {(totalReactions > 0 || post.comments.length > 0) && (
+        <div className="flex items-center justify-between px-3 pt-2 text-xs text-slate-500">
+          <span className="flex items-center gap-1">
+            {post.reactions.slice(0, 3).map((r) => (
+              <span key={r.emoji}>{r.emoji}</span>
+            ))}
+            {totalReactions > 0 && <span>{totalReactions}</span>}
+          </span>
+          {post.comments.length > 0 && (
+            <span>{post.comments.length} comentários</span>
+          )}
+        </div>
+      )}
+
+      {/* Barra de ações (estilo Facebook, com divisórias) */}
+      <div className="mt-2 flex items-center border-y border-slate-100">
         <button
           onClick={() => setShowReact((v) => !v)}
-          className="text-xl"
-          title="Reagir"
+          className="flex flex-1 items-center justify-center gap-2 py-2 text-sm font-medium text-slate-500 hover:bg-slate-50"
         >
-          🤍
+          🤍 Curtir
         </button>
-        <span className="text-xs text-slate-400">
-          {post.reactions.reduce((s, r) => s + r.count, 0)} reações ·{" "}
-          {post.comments.length} comentários
-        </span>
+        <label
+          htmlFor={`comment-${post.id}`}
+          className="flex flex-1 cursor-pointer items-center justify-center gap-2 py-2 text-sm font-medium text-slate-500 hover:bg-slate-50"
+        >
+          💬 Comentar
+        </label>
       </div>
+
       {showReact && (
-        <div className="flex gap-1 px-3 pt-1">
+        <div className="flex flex-wrap gap-1 px-3 pt-2">
           {TL_REACTIONS.map((e) => (
             <form key={e} action={toggleTimelineReactionAction}>
               <input type="hidden" name="post_id" value={post.id} />
@@ -117,7 +156,7 @@ export function TimelinePostCard({
         </div>
       )}
       {post.reactions.length > 0 && (
-        <div className="flex flex-wrap gap-1 px-3 pt-1">
+        <div className="flex flex-wrap gap-1 px-3 pt-2">
           {post.reactions.map((r) => (
             <form key={r.emoji} action={toggleTimelineReactionAction}>
               <input type="hidden" name="post_id" value={post.id} />
@@ -134,35 +173,68 @@ export function TimelinePostCard({
         </div>
       )}
 
-      {/* Legenda */}
-      {post.body && (
-        <p className="px-3 pt-2 text-sm text-slate-700">
-          <span className="font-semibold">{post.author_name}</span> {post.body}
-        </p>
+      {/* Seção de comentários (separada do conteúdo principal) */}
+      {post.comments.length > 0 && (
+        <div className="space-y-2 bg-slate-50 px-3 py-3">
+          {post.comments.map((c) => (
+            <div key={c.id} className="flex items-start gap-2">
+              <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-azul-suave text-[10px] font-bold text-azul-navy">
+                {initials(c.author_name)}
+              </span>
+              <div className="rounded-2xl bg-white px-3 py-2 shadow-sm">
+                <p className="text-xs font-semibold text-slate-700">
+                  {c.author_name}
+                </p>
+                <p className="whitespace-pre-wrap text-sm text-slate-600">
+                  {c.body}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
 
-      {/* Comentários */}
-      <div className="space-y-1 px-3 pt-2">
-        {post.comments.map((c) => (
-          <p key={c.id} className="text-sm text-slate-600">
-            <span className="font-semibold text-slate-700">{c.author_name}</span>{" "}
-            {c.body}
-          </p>
-        ))}
-      </div>
-
-      <form
-        action={addTimelineCommentAction}
-        className="flex items-center gap-2 p-3"
-      >
+      {/* Campo de comentário com emojis */}
+      <form action={submitComment} className="border-t border-slate-100 p-3">
         <input type="hidden" name="post_id" value={post.id} />
-        <input
-          name="body"
-          required
-          placeholder="Adicione um comentário…"
-          className="flex-1 rounded-full border border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-azul"
-        />
-        <button className="text-sm font-semibold text-azul">Publicar</button>
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <input
+              id={`comment-${post.id}`}
+              name="body"
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              autoComplete="off"
+              placeholder="Adicione um comentário…"
+              className="w-full rounded-full border border-slate-300 px-3 py-1.5 pr-9 text-sm outline-none focus:border-azul"
+            />
+            <button
+              type="button"
+              onClick={() => setShowEmoji((v) => !v)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-lg"
+              title="Emojis"
+            >
+              😊
+            </button>
+          </div>
+          <button className="text-sm font-semibold text-azul hover:text-azul-navy">
+            Publicar
+          </button>
+        </div>
+        {showEmoji && (
+          <div className="mt-2 flex flex-wrap gap-1 rounded-lg border border-slate-200 bg-white p-2">
+            {EMOJIS.map((e) => (
+              <button
+                key={e}
+                type="button"
+                onClick={() => setComment((c) => c + e)}
+                className="rounded px-1 text-lg hover:bg-slate-100"
+              >
+                {e}
+              </button>
+            ))}
+          </div>
+        )}
       </form>
     </article>
   );
