@@ -18,6 +18,11 @@ export function BlogComments({
   comments: BlogComment[];
 }) {
   const [body, setBody] = useState("");
+  const [showAll, setShowAll] = useState(false);
+
+  const VISIBLE = 2;
+  const visible = showAll ? comments : comments.slice(0, VISIBLE);
+  const hiddenCount = comments.length - visible.length;
 
   async function submit(fd: FormData) {
     if (!body.trim()) return;
@@ -33,7 +38,17 @@ export function BlogComments({
 
       {comments.length > 0 && (
         <div className="mb-4 space-y-2">
-          {comments.map((c) => (
+          {!showAll && hiddenCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowAll(true)}
+              className="flex items-center gap-1 text-xs font-medium text-azul hover:underline"
+            >
+              ▼ Ver mais {hiddenCount}{" "}
+              {hiddenCount === 1 ? "comentário" : "comentários"}
+            </button>
+          )}
+          {visible.map((c) => (
             <div key={c.id} className="flex items-start gap-2">
               <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-azul-suave text-[10px] font-bold text-azul-navy">
                 {initials(c.author_name)}
@@ -51,6 +66,15 @@ export function BlogComments({
               </div>
             </div>
           ))}
+          {showAll && comments.length > VISIBLE && (
+            <button
+              type="button"
+              onClick={() => setShowAll(false)}
+              className="flex items-center gap-1 text-xs font-medium text-slate-400 hover:underline"
+            >
+              ▲ Ver menos
+            </button>
+          )}
         </div>
       )}
 
