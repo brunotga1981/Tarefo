@@ -7,6 +7,7 @@ type Aniv = {
   name: string;
   day: number;
   month: number;
+  work_location: string | null;
 };
 
 const MESES = [
@@ -16,10 +17,10 @@ const MESES = [
 
 export default async function AniversariosPage() {
   const rows = await query<Aniv>(
-    `SELECT id, name,
+    `SELECT id, name, work_location,
        EXTRACT(DAY FROM birth_date)::int AS day,
        EXTRACT(MONTH FROM birth_date)::int AS month
-     FROM users WHERE birth_date IS NOT NULL`
+     FROM users WHERE birth_date IS NOT NULL AND active`
   );
 
   const now = new Date();
@@ -77,9 +78,14 @@ export default async function AniversariosPage() {
         ) : (
           <ul className="space-y-1 text-sm text-slate-700">
             {thisMonth.map((r) => (
-              <li key={r.id} className="flex justify-between">
-                <span>{r.name}</span>
-                <span className="text-slate-400">
+              <li key={r.id} className="flex justify-between gap-2">
+                <span className="truncate">
+                  {r.name}
+                  {r.work_location && (
+                    <span className="text-xs text-slate-400"> · {r.work_location}</span>
+                  )}
+                </span>
+                <span className="shrink-0 text-slate-400">
                   {String(r.day).padStart(2, "0")}/{String(r.month).padStart(2, "0")}
                 </span>
               </li>
@@ -94,9 +100,14 @@ export default async function AniversariosPage() {
         </h2>
         <ul className="space-y-1 text-sm text-slate-700">
           {list.map((r) => (
-            <li key={r.id} className="flex justify-between">
-              <span>{r.name}</span>
-              <span className="text-slate-400">
+            <li key={r.id} className="flex justify-between gap-2">
+              <span className="truncate">
+                {r.name}
+                {r.work_location && (
+                  <span className="text-xs text-slate-400"> · {r.work_location}</span>
+                )}
+              </span>
+              <span className="shrink-0 text-slate-400">
                 {String(r.day).padStart(2, "0")}/{String(r.month).padStart(2, "0")}
                 {r.until === 0
                   ? " · hoje"
