@@ -37,6 +37,11 @@ export const PERMISSIONS = [
     label: "Publicar na Time Line",
     group: "Intranet",
   },
+  {
+    key: "highlights.manage",
+    label: "Gerenciar destaques da Time Line",
+    group: "Intranet",
+  },
   { key: "sac.manage", label: "Atender o SAC", group: "SAC" },
   {
     key: "api.manage",

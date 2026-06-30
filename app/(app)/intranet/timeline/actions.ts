@@ -4,6 +4,11 @@ import { revalidatePath } from "next/cache";
 import { query } from "@/lib/db";
 import { getCurrentUser, can } from "@/lib/auth";
 import { storeImageBuffer, storeDataUrl } from "@/lib/images";
+import {
+  setPostHighlights,
+  createHighlight,
+  deleteHighlight,
+} from "@/lib/timeline";
 import { generatePostCopy, generatePostImage } from "@/lib/ai";
 
 function str(fd: FormData, k: string) {
@@ -32,11 +37,35 @@ export async function createTimelinePostAction(fd: FormData) {
   const body = str(fd, "body");
   if (!body) return; // texto é obrigatório
   const imageUrl = await resolveFormImage(fd);
-  await query(
-    `INSERT INTO timeline_posts (kind, author_id, author_name, body, image_url)
-     VALUES ('POST',$1,$2,$3,$4)`,
-    [user!.id, user!.name, body, imageUrl]
+  const publishAt = str(fd, "publish_at") || null;
+  const expiresAt = str(fd, "expires_at") || null;
+  const rows = await query<{ id: string }>(
+    `INSERT INTO timeline_posts (kind, author_id, author_name, body, image_url, publish_at, expires_at)
+     VALUES ('POST',$1,$2,$3,$4,$5,$6) RETURNING id`,
+    [user!.id, user!.name, body, imageUrl, publishAt, expiresAt]
   );
+  const highlightIds = fd.getAll("highlight_ids").map(String).filter(Boolean);
+  if (rows[0] && highlightIds.length) {
+    await setPostHighlights(rows[0].id, highlightIds);
+  }
+  revalidatePath("/intranet/timeline");
+}
+
+// ---- Destaques (stories) ----
+export async function createHighlightAction(fd: FormData) {
+  const user = await getCurrentUser();
+  if (!can(user, "highlights.manage")) throw new Error("Sem permissão.");
+  const title = str(fd, "title");
+  if (!title) return;
+  const imageUrl = await resolveFormImage(fd);
+  await createHighlight(title, imageUrl);
+  revalidatePath("/intranet/timeline");
+}
+
+export async function deleteHighlightAction(fd: FormData) {
+  const user = await getCurrentUser();
+  if (!can(user, "highlights.manage")) throw new Error("Sem permissão.");
+  await deleteHighlight(str(fd, "id"));
   revalidatePath("/intranet/timeline");
 }
 

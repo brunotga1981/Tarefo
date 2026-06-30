@@ -62,8 +62,18 @@ export function TimelinePostCard({
             {initials(post.author_name)}
           </span>
           <div className="leading-tight">
-            <p className="text-sm font-semibold text-slate-800">
+            <p className="flex items-center gap-2 text-sm font-semibold text-slate-800">
               {post.author_name}
+              {post.status === "AGENDADO" && (
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+                  agendado
+                </span>
+              )}
+              {post.status === "EXPIRADO" && (
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">
+                  expirado
+                </span>
+              )}
             </p>
             <p className="text-[11px] text-slate-400">
               {formatDateTime(post.created_at)}

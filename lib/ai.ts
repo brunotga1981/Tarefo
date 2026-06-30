@@ -83,7 +83,9 @@ export async function generatePostImage(prompt: string): Promise<string> {
     },
     body: JSON.stringify({
       model,
-      prompt: topic,
+      prompt:
+        `${topic}. Composição centralizada, com margens de segurança nas bordas; ` +
+        `não cortar textos, títulos nem elementos importantes nas extremidades (topo e rodapé).`,
       n: 1,
       size: "1024x1024",
     }),

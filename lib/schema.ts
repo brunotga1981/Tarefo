@@ -336,6 +336,24 @@ CREATE TABLE IF NOT EXISTS timeline_comments (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- Agendamento de postagens (início/fim) da Time Line
+ALTER TABLE timeline_posts ADD COLUMN IF NOT EXISTS publish_at timestamptz;
+ALTER TABLE timeline_posts ADD COLUMN IF NOT EXISTS expires_at timestamptz;
+
+-- Destaques (stories fixos estilo Instagram) da Time Line
+CREATE TABLE IF NOT EXISTS highlights (
+  id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  title text NOT NULL,
+  image_url text,
+  "order" integer NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS timeline_post_highlights (
+  post_id text NOT NULL REFERENCES timeline_posts(id) ON DELETE CASCADE,
+  highlight_id text NOT NULL REFERENCES highlights(id) ON DELETE CASCADE,
+  PRIMARY KEY (post_id, highlight_id)
+);
+
 -- Blog "Conheça Mais"
 CREATE TABLE IF NOT EXISTS blog_posts (
   id text PRIMARY KEY DEFAULT gen_random_uuid()::text,

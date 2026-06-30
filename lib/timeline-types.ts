@@ -17,8 +17,17 @@ export type TLPost = {
   course_title?: string | null;
   score: number | null;
   created_at: string;
+  publish_at: string | null;
+  expires_at: string | null;
+  status?: "AGENDADO" | "EXPIRADO" | null; // calculado para autor/moderador
   reactions: TLReaction[];
   comments: TLComment[];
+};
+
+export type Highlight = {
+  id: string;
+  title: string;
+  image_url: string | null;
 };
 
 export const TL_REACTIONS = ["❤️", "👏", "🎉", "👍", "🔥"];
