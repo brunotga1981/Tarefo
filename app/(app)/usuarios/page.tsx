@@ -4,13 +4,14 @@ import { getCurrentUser, can } from "@/lib/auth";
 import {
   listUsersFull,
   listProfilesWithPerms,
+  listGroupNames,
   type UserFull,
   type ProfileWithPerms,
 } from "@/lib/admin-data";
 import { NoAccess } from "@/components/NoAccess";
 import { ResetForm } from "@/components/tarefo/ResetForm";
 import Link from "next/link";
-import { VERTICALS, TEAMS, WORK_LOCATIONS } from "@/lib/users-meta";
+import { VERTICALS, WORK_LOCATIONS } from "@/lib/users-meta";
 import {
   createUserAction,
   updateUserAction,
@@ -31,9 +32,11 @@ function dateInput(v: string | null): string {
 /** Conjunto de campos do cadastro/edição (sem senha). */
 function UserFields({
   profiles,
+  teams,
   u,
 }: {
   profiles: ProfileWithPerms[];
+  teams: string[];
   u?: UserFull;
 }) {
   const vertical = u?.vertical ?? [];
@@ -77,12 +80,12 @@ function UserFields({
         <label className={label}>Equipe de trabalho</label>
         <select name="team" defaultValue={u?.team ?? ""} className={field}>
           <option value="">— Equipe —</option>
-          {TEAMS.map((t) => (
+          {teams.map((t) => (
             <option key={t} value={t}>
               {t}
             </option>
           ))}
-          {u?.team && !TEAMS.includes(u.team as (typeof TEAMS)[number]) && (
+          {u?.team && !teams.includes(u.team) && (
             <option value={u.team}>{u.team}</option>
           )}
         </select>
@@ -140,9 +143,10 @@ export default async function UsuariosPage({
   if (!can(user, "users.manage")) return <NoAccess />;
   // Apenas administradores podem visualizar os usuários desativados.
   const isAdmin = can(user, "access.manage");
-  const [allUsers, profiles] = await Promise.all([
+  const [allUsers, profiles, teams] = await Promise.all([
     listUsersFull(),
     listProfilesWithPerms(),
+    listGroupNames(),
   ]);
 
   const status =
@@ -169,7 +173,7 @@ export default async function UsuariosPage({
           action={createUserAction}
           className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
         >
-          <UserFields profiles={profiles} />
+          <UserFields profiles={profiles} teams={teams} />
           <div>
             <label className={label}>Senha</label>
             <input
@@ -262,7 +266,7 @@ export default async function UsuariosPage({
                 className="mt-3 grid grid-cols-1 gap-3 border-t border-slate-100 pt-3 sm:grid-cols-2 lg:grid-cols-3"
               >
                 <input type="hidden" name="id" value={u.id} />
-                <UserFields profiles={profiles} u={u} />
+                <UserFields profiles={profiles} teams={teams} u={u} />
                 <div className="flex items-end">
                   <button className="rounded-lg bg-azul px-4 py-2 text-sm font-semibold text-white hover:bg-azul-navy">
                     Salvar alterações

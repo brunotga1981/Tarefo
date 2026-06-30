@@ -2,7 +2,8 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { query } from "@/lib/db";
-import { TEAMS, VERTICALS, WORK_LOCATIONS } from "@/lib/users-meta";
+import { listGroupNames } from "@/lib/admin-data";
+import { VERTICALS, WORK_LOCATIONS } from "@/lib/users-meta";
 
 type Aniv = {
   id: string;
@@ -25,10 +26,11 @@ export default async function AniversariosPage({
 }: {
   searchParams: { local?: string; equipe?: string; vertical?: string };
 }) {
+  const teams = await listGroupNames();
   const local = WORK_LOCATIONS.includes(searchParams.local as any)
     ? searchParams.local
     : "";
-  const equipe = TEAMS.includes(searchParams.equipe as any)
+  const equipe = teams.includes(searchParams.equipe ?? "")
     ? searchParams.equipe
     : "";
   const vertical = VERTICALS.includes(searchParams.vertical as any)
@@ -102,7 +104,7 @@ export default async function AniversariosPage({
         </select>
         <select name="equipe" defaultValue={equipe} className={sel}>
           <option value="">Equipe — todas</option>
-          {TEAMS.map((t) => (
+          {teams.map((t) => (
             <option key={t} value={t}>
               {t}
             </option>

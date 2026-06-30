@@ -47,6 +47,14 @@ export type ProfileWithPerms = {
   permissions: string[];
 };
 
+/** Nomes dos grupos de trabalho cadastrados (usados como "Equipe de trabalho"). */
+export async function listGroupNames(): Promise<string[]> {
+  const rows = await query<{ name: string }>(
+    `SELECT name FROM groups ORDER BY name`
+  );
+  return rows.map((r) => r.name);
+}
+
 export async function listProfilesWithPerms(): Promise<ProfileWithPerms[]> {
   const profiles = await query<{ id: string; name: string }>(
     `SELECT id, name FROM profiles ORDER BY name`
