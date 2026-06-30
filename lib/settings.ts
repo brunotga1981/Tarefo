@@ -48,6 +48,27 @@ export const SETTING_GROUPS: SettingGroup[] = [
     ],
   },
   {
+    id: "openai",
+    title: "ChatGPT / OpenAI (geração de imagens)",
+    icon: "🎨",
+    description:
+      "Geração de imagens por IA na Time Line da Intranet e na capa dos treinamentos.",
+    fields: [
+      {
+        key: "OPENAI_API_KEY",
+        label: "API Key",
+        placeholder: "sk-...",
+        secret: true,
+        help: "Disponível em platform.openai.com → API Keys.",
+      },
+      {
+        key: "OPENAI_IMAGE_MODEL",
+        label: "Modelo de imagem",
+        placeholder: "gpt-image-1",
+      },
+    ],
+  },
+  {
     id: "superlogica",
     title: "Superlógica (ERP / CRM)",
     icon: "🏢",

@@ -6,10 +6,15 @@ import { query } from "@/lib/db";
 import { getCurrentUser, can } from "@/lib/auth";
 import { saveUpload } from "@/lib/upload";
 import { PASS_SCORE } from "@/lib/lms";
-import { generateQuizWithAI, generateCourseContent } from "@/lib/ai";
+import {
+  generateQuizWithAI,
+  generateCourseContent,
+  generatePostImage,
+} from "@/lib/ai";
 
 export type AiQuizState = { error?: string; created?: number };
 export type AiContentState = { error?: string; ok?: boolean };
+export type AiImageState = { error?: string; ok?: boolean };
 
 async function requireManage() {
   const user = await getCurrentUser();
@@ -173,6 +178,32 @@ export async function generateContentAction(
     return { ok: true };
   } catch (e: any) {
     return { error: e?.message ?? "Falha ao gerar o conteúdo com IA." };
+  }
+}
+
+// ---- Gerar imagem de capa do curso com IA (OpenAI/ChatGPT) ----
+export async function generateCourseImageAction(
+  _prev: AiImageState,
+  fd: FormData
+): Promise<AiImageState> {
+  await requireManage();
+  const trainingId = str(fd, "training_id");
+  if (!trainingId) return { error: "Curso inválido." };
+  const course = await query<{ title: string }>(
+    `SELECT title FROM trainings WHERE id=$1`,
+    [trainingId]
+  );
+  const prompt =
+    str(fd, "prompt") ||
+    `Imagem de capa ilustrativa, moderna e profissional para um curso interno chamado "${course[0]?.title ?? "Curso"}".`;
+  try {
+    const url = await generatePostImage(prompt);
+    await query(`UPDATE trainings SET image_url=$2 WHERE id=$1`, [trainingId, url]);
+    revalidatePath(`/treinamentos/${trainingId}`);
+    revalidatePath("/treinamentos");
+    return { ok: true };
+  } catch (e: any) {
+    return { error: e?.message ?? "Falha ao gerar a imagem com IA." };
   }
 }
 

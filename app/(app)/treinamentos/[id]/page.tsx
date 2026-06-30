@@ -20,6 +20,7 @@ import { Tabs } from "@/components/tarefo/Tabs";
 import { ResetForm } from "@/components/tarefo/ResetForm";
 import { AiQuizForm } from "@/components/AiQuizForm";
 import { AiContentForm } from "@/components/AiContentForm";
+import { AiImageForm } from "@/components/AiImageForm";
 import { formatDate } from "@/lib/format";
 import {
   addMaterialAction,
@@ -354,6 +355,15 @@ export default async function CourseDetailPage({
         {course.description && (
           <p className="mt-2 text-sm text-slate-600">{course.description}</p>
         )}
+        {course.image_url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={course.image_url}
+            alt={`Capa do curso ${course.title}`}
+            className="mt-3 max-h-64 w-full rounded-lg object-cover"
+          />
+        )}
+        {canManage && <AiImageForm trainingId={course.id} />}
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white p-4">

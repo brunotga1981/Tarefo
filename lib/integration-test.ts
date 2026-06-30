@@ -35,6 +35,27 @@ async function testAnthropic(v: Record<string, string>): Promise<TestResult> {
   }
 }
 
+// ---- ChatGPT / OpenAI (imagens) ----
+async function testOpenAI(v: Record<string, string>): Promise<TestResult> {
+  const key = v.OPENAI_API_KEY;
+  if (!key) return { ok: false, message: "Informe a API Key da OpenAI." };
+  const base = process.env.OPENAI_API_URL || "https://api.openai.com";
+  try {
+    const res = await fetch(`${base}/v1/models`, {
+      headers: { authorization: `Bearer ${key}` },
+    });
+    if (res.ok) {
+      const model = v.OPENAI_IMAGE_MODEL || "gpt-image-1";
+      return { ok: true, message: `Conexão OK (imagens com ${model}).` };
+    }
+    if (res.status === 401)
+      return { ok: false, message: "API Key inválida (401 não autorizado)." };
+    return { ok: false, message: `Falha (HTTP ${res.status}).` };
+  } catch (e: any) {
+    return { ok: false, message: `Erro de conexão: ${e?.message ?? e}` };
+  }
+}
+
 // ---- Superlógica (ERP/CRM) ----
 async function testSuperlogica(v: Record<string, string>): Promise<TestResult> {
   const app = v.SUPERLOGICA_APP_TOKEN;
@@ -279,6 +300,8 @@ export async function runIntegrationTest(
   switch (group) {
     case "anthropic":
       return testAnthropic(values);
+    case "openai":
+      return testOpenAI(values);
     case "superlogica":
       return testSuperlogica(values);
     case "zapi":

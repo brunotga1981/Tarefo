@@ -57,13 +57,46 @@ export async function generatePostCopy(topic: string): Promise<string> {
   return text.trim();
 }
 
-// Geração de imagem por IA (requer provedor de imagem configurado).
-export async function generatePostImage(_prompt: string): Promise<string> {
-  // A API da Claude não gera imagens. Integração com um provedor de imagens
-  // (ex.: OpenAI Images / Stability) pode ser plugada aqui via env dedicada.
-  throw new Error(
-    "Geração de imagem por IA ainda não configurada (requer chave de um provedor de imagens). Envie uma imagem ou informe uma URL."
-  );
+// Geração de imagem por IA via OpenAI (ChatGPT). Configure OPENAI_API_KEY na
+// tela API. Retorna uma data URL (base64) pronta para usar em <img>/salvar.
+export async function imageAiEnabled(): Promise<boolean> {
+  return !!(await getSetting("OPENAI_API_KEY"));
+}
+
+export async function generatePostImage(prompt: string): Promise<string> {
+  const topic = (prompt ?? "").trim();
+  if (!topic) throw new Error("Informe um tema para a imagem.");
+  const key = await getSetting("OPENAI_API_KEY");
+  if (!key)
+    throw new Error(
+      "Geração de imagem não configurada. Defina a API Key da OpenAI (ChatGPT) na tela API."
+    );
+  const model = (await getSetting("OPENAI_IMAGE_MODEL")) || "gpt-image-1";
+  const base = process.env.OPENAI_API_URL || "https://api.openai.com";
+
+  const res = await fetch(`${base}/v1/images/generations`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${key}`,
+    },
+    body: JSON.stringify({
+      model,
+      prompt: topic,
+      n: 1,
+      size: "1024x1024",
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    if (res.status === 401) throw new Error("API Key da OpenAI inválida (401).");
+    throw new Error(`Falha ao gerar imagem (HTTP ${res.status}). ${body.slice(0, 140)}`);
+  }
+  const data = await res.json();
+  const item = data?.data?.[0] ?? {};
+  if (item.b64_json) return `data:image/png;base64,${item.b64_json}`;
+  if (item.url) return item.url as string;
+  throw new Error("A IA não retornou imagem.");
 }
 
 // Elabora o conteúdo do curso a partir de um material de referência (e anexos).
