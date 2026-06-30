@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { redirect } from "next/navigation";
 import { getCurrentUser, can } from "@/lib/auth";
 import { listTimeline, getHighlightStories } from "@/lib/timeline";
+import { runBirthdayPosts } from "@/lib/birthdays";
 import { TimelineComposer } from "@/components/timeline/TimelineComposer";
 import { TimelinePostCard } from "@/components/timeline/TimelinePostCard";
 import { HighlightsBar } from "@/components/timeline/HighlightsBar";
@@ -14,6 +15,7 @@ export default async function TimelinePage() {
   const canModerate = can(user, "blog.manage");
   const canHighlights = can(user, "highlights.manage");
 
+  await runBirthdayPosts(); // publica cartão dos aniversariantes do dia (1x/dia)
   const highlights = await getHighlightStories(user.id);
   const posts = await listTimeline(user.id, { canModerate });
 
