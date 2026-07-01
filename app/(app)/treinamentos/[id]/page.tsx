@@ -18,6 +18,8 @@ import {
   embedUrl,
 } from "@/lib/lms";
 import { formatDateTime } from "@/lib/format";
+import { markForumRead } from "@/lib/notifications";
+import { listUsersBasic } from "@/lib/data";
 import { Tabs } from "@/components/tarefo/Tabs";
 import { ResetForm } from "@/components/tarefo/ResetForm";
 import { AiQuizForm } from "@/components/AiQuizForm";
@@ -35,10 +37,29 @@ import {
   deleteQuestionAction,
   deleteCourseAction,
   addForumPostAction,
+  setCourseTutorAction,
 } from "../actions";
 
 const field =
   "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-azul";
+
+/** Renderiza o texto do fórum destacando as menções @usuário. */
+function ForumBody({ text }: { text: string }) {
+  const parts = text.split(/(@[a-zA-Z0-9._-]+)/g);
+  return (
+    <>
+      {parts.map((p, i) =>
+        /^@[a-zA-Z0-9._-]+$/.test(p) ? (
+          <span key={i} className="font-semibold text-azul">
+            {p}
+          </span>
+        ) : (
+          <span key={i}>{p}</span>
+        )
+      )}
+    </>
+  );
+}
 
 export default async function CourseDetailPage({
   params,
@@ -52,16 +73,22 @@ export default async function CourseDetailPage({
   const course = await getCourse(params.id);
   if (!course) notFound();
 
-  // Registra o acesso do usuário (para o controle de "quem acessou e quantas vezes").
+  // Registra o acesso do usuário e marca o fórum deste curso como lido
+  // (limpa o alerta "Fórum" para tutor/mencionado após visitar o curso).
   await registerCourseView(course.id, user.id);
+  await markForumRead(user.id, course.id);
 
-  const [materials, questions, completion, forum, accesses] = await Promise.all([
-    getMaterials(course.id),
-    getQuestions(course.id),
-    getCompletion(course.id, user.id),
-    getForum(course.id),
-    getCourseAccesses(course.id),
-  ]);
+  const [materials, questions, completion, forum, accesses, users] =
+    await Promise.all([
+      getMaterials(course.id),
+      getQuestions(course.id),
+      getCompletion(course.id, user.id),
+      getForum(course.id),
+      getCourseAccesses(course.id),
+      canManage
+        ? listUsersBasic()
+        : Promise.resolve([] as Awaited<ReturnType<typeof listUsersBasic>>),
+    ]);
   const totalAccesses = accesses.reduce((s, a) => s + a.count, 0);
 
   // ---- Aba Conteúdo ----
@@ -284,13 +311,46 @@ export default async function CourseDetailPage({
   // ---- Aba Fórum ----
   const forumTab = (
     <div className="space-y-4">
+      {/* Tutor de dúvidas */}
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-100 bg-slate-50 p-3">
+        <span className="text-sm text-slate-600">
+          👤 Tutor de dúvidas:{" "}
+          <strong className="text-azul-navy">
+            {course.tutor_name ?? "não definido"}
+          </strong>
+        </span>
+        {canManage && (
+          <form action={setCourseTutorAction} className="flex items-center gap-2">
+            <input type="hidden" name="training_id" value={course.id} />
+            <select
+              name="tutor_id"
+              defaultValue={course.tutor_id ?? ""}
+              className="rounded-lg border border-slate-300 px-2 py-1 text-xs outline-none focus:border-azul"
+            >
+              <option value="">— sem tutor —</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
+            </select>
+            <SubmitButton
+              pendingText="Salvando…"
+              className="rounded-lg border border-azul px-2 py-1 text-xs font-semibold text-azul hover:bg-azul hover:text-white disabled:opacity-60"
+            >
+              Definir
+            </SubmitButton>
+          </form>
+        )}
+      </div>
+
       <ResetForm action={addForumPostAction} className="space-y-2">
         <input type="hidden" name="training_id" value={course.id} />
         <textarea
           name="body"
           required
           rows={2}
-          placeholder="Faça uma pergunta sobre este curso…"
+          placeholder="Faça uma pergunta sobre este curso… (use @nome para marcar alguém)"
           className={field}
         />
         <SubmitButton
@@ -317,7 +377,9 @@ export default async function CourseDetailPage({
               {formatDateTime(question.created_at)}
             </span>
           </div>
-          <p className="text-sm text-slate-700">{question.body}</p>
+          <p className="text-sm text-slate-700">
+            <ForumBody text={question.body} />
+          </p>
 
           <div className="mt-2 space-y-1 border-l-2 border-slate-100 pl-3">
             {answers.map((a) => (
@@ -325,7 +387,9 @@ export default async function CourseDetailPage({
                 <span className="text-[11px] font-semibold text-emerald-700">
                   ↳ {a.author_name}:
                 </span>{" "}
-                <span className="text-slate-700">{a.body}</span>
+                <span className="text-slate-700">
+                  <ForumBody text={a.body} />
+                </span>
               </div>
             ))}
           </div>

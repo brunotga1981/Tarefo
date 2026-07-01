@@ -14,11 +14,14 @@ const field =
 export default async function TreinamentosPage() {
   const user = await getCurrentUser();
   const canManage = can(user, "trainings.manage");
-  const [courses, ranking, groups] = await Promise.all([
+  const [courses, ranking, groups, users] = await Promise.all([
     listCourses(user!.id),
     getRanking(),
     canManage
       ? query<{ id: string; name: string }>(`SELECT id, name FROM groups ORDER BY name`)
+      : Promise.resolve([] as { id: string; name: string }[]),
+    canManage
+      ? query<{ id: string; name: string }>(`SELECT id, name FROM users ORDER BY name`)
       : Promise.resolve([] as { id: string; name: string }[]),
   ]);
   const me = ranking.find((r) => r.id === user!.id);
@@ -139,6 +142,17 @@ export default async function TreinamentosPage() {
               <label className="block text-xs text-slate-500">
                 Prazo para concluir (se obrigatório)
                 <input type="date" name="deadline" className={`${field} mt-1`} />
+              </label>
+              <label className="block text-xs text-slate-500">
+                Tutor de dúvidas do fórum
+                <select name="tutor_id" defaultValue="" className={`${field} mt-1`}>
+                  <option value="">— sem tutor —</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+                </select>
               </label>
               <SubmitButton
                 pendingText="Criando…"

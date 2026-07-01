@@ -52,6 +52,12 @@ export function NotificationBar({ notif }: { notif: Notifications }) {
         label="Treino"
         count={notif.treino}
       />
+      <Item
+        href="/treinamentos"
+        icon="💭"
+        label="Fórum"
+        count={notif.forum}
+      />
     </div>
   );
 }

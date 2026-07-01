@@ -265,6 +265,16 @@ ALTER TABLE trainings ADD COLUMN IF NOT EXISTS group_id text REFERENCES groups(i
 ALTER TABLE trainings ADD COLUMN IF NOT EXISTS deadline date;
 -- Apresentação (slides) gerada a partir do conteúdo do curso
 ALTER TABLE trainings ADD COLUMN IF NOT EXISTS slides jsonb;
+-- Tutor de dúvidas do fórum do curso
+ALTER TABLE trainings ADD COLUMN IF NOT EXISTS tutor_id text REFERENCES users(id) ON DELETE SET NULL;
+
+-- Leitura do fórum por usuário/curso (para o alerta "Fórum")
+CREATE TABLE IF NOT EXISTS training_forum_reads (
+  user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  training_id text NOT NULL REFERENCES trainings(id) ON DELETE CASCADE,
+  last_read_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, training_id)
+);
 
 -- Materiais do curso (vídeo, PDF, PPT, link...)
 CREATE TABLE IF NOT EXISTS training_materials (
@@ -320,6 +330,14 @@ CREATE TABLE IF NOT EXISTS training_forum (
   parent_id text REFERENCES training_forum(id) ON DELETE CASCADE,
   body text NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Menções (@usuário) feitas em postagens do fórum
+CREATE TABLE IF NOT EXISTS training_forum_mentions (
+  post_id text NOT NULL REFERENCES training_forum(id) ON DELETE CASCADE,
+  user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (post_id, user_id)
 );
 
 -- Time Line (feed estilo Instagram da Intranet)

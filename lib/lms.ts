@@ -53,6 +53,8 @@ export type Course = {
   group_id: string | null;
   group_name?: string | null;
   deadline: string | null;
+  tutor_id?: string | null;
+  tutor_name?: string | null;
   slides?: Slide[] | null;
   material_count?: number;
   question_count?: number;
@@ -93,8 +95,11 @@ export async function listCourses(userId: string): Promise<Course[]> {
 export async function getCourse(id: string): Promise<Course | null> {
   const rows = await query<Course>(
     `SELECT t.id, t.title, t.theme, t.subtheme, t.description, t.content, t.image_url,
-       t.mandatory, t.group_id, t.deadline, t.slides, g.name AS group_name
-     FROM trainings t LEFT JOIN groups g ON g.id = t.group_id
+       t.mandatory, t.group_id, t.deadline, t.slides, t.tutor_id,
+       g.name AS group_name, tu.name AS tutor_name
+     FROM trainings t
+     LEFT JOIN groups g ON g.id = t.group_id
+     LEFT JOIN users tu ON tu.id = t.tutor_id
      WHERE t.id=$1`,
     [id]
   );

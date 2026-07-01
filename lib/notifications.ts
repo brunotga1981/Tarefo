@@ -6,9 +6,17 @@ export type Notifications = {
   tarefa: number; // novas tarefas atribuídas a você desde a última visita ao quadro
   mt: number; // Marcações de Tarefas (MT) pendentes
   treino: number; // treinamentos disponíveis ainda não aprovados
+  forum: number; // dúvidas do fórum para você (tutor) ou menções (@você)
 };
 
-const ZERO: Notifications = { torpedo: 0, canal: 0, tarefa: 0, mt: 0, treino: 0 };
+const ZERO: Notifications = {
+  torpedo: 0,
+  canal: 0,
+  tarefa: 0,
+  mt: 0,
+  treino: 0,
+  forum: 0,
+};
 
 export async function getNotifications(userId: string): Promise<Notifications> {
   try {
@@ -70,13 +78,49 @@ async function computeNotifications(userId: string): Promise<Notifications> {
     [userId]
   );
 
+  // Fórum: dúvidas em cursos onde sou tutor + menções (@mim), desde a última
+  // vez que li o fórum daquele curso (união evita contar o mesmo post 2x).
+  const forum = await query<{ count: number }>(
+    `SELECT count(*)::int AS count FROM (
+       SELECT f.id FROM training_forum f
+       JOIN trainings t ON t.id = f.training_id AND t.tutor_id = $1
+       LEFT JOIN training_forum_reads r
+         ON r.training_id = f.training_id AND r.user_id = $1
+       WHERE f.user_id IS DISTINCT FROM $1
+         AND f.created_at > COALESCE(r.last_read_at, to_timestamp(0))
+       UNION
+       SELECT f.id FROM training_forum_mentions m
+       JOIN training_forum f ON f.id = m.post_id
+       LEFT JOIN training_forum_reads r
+         ON r.training_id = f.training_id AND r.user_id = $1
+       WHERE m.user_id = $1 AND f.user_id IS DISTINCT FROM $1
+         AND f.created_at > COALESCE(r.last_read_at, to_timestamp(0))
+     ) x`,
+    [userId]
+  );
+
   return {
     torpedo: torpedo[0]?.count ?? 0,
     canal: canal[0]?.count ?? 0,
     tarefa: tarefa[0]?.count ?? 0,
     mt: mt[0]?.count ?? 0,
     treino: treino[0]?.count ?? 0,
+    forum: forum[0]?.count ?? 0,
   };
+}
+
+/** Marca o fórum de um curso como lido pelo usuário (limpa o alerta "Fórum"). */
+export async function markForumRead(
+  userId: string,
+  trainingId: string
+): Promise<void> {
+  await query(
+    `INSERT INTO training_forum_reads (user_id, training_id, last_read_at)
+     VALUES ($1, $2, now())
+     ON CONFLICT (user_id, training_id)
+     DO UPDATE SET last_read_at = now()`,
+    [userId, trainingId]
+  );
 }
 
 export async function markConversationRead(

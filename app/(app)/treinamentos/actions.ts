@@ -38,8 +38,8 @@ export async function createCourseAction(fd: FormData) {
     imageUrl = (await saveUpload(file, "curso")).url;
   }
   const rows = await query<{ id: string }>(
-    `INSERT INTO trainings (title, theme, subtheme, description, image_url, mandatory, group_id, deadline)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
+    `INSERT INTO trainings (title, theme, subtheme, description, image_url, mandatory, group_id, deadline, tutor_id)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
     [
       title,
       str(fd, "theme") || null,
@@ -49,6 +49,7 @@ export async function createCourseAction(fd: FormData) {
       fd.get("mandatory") === "on",
       str(fd, "group_id") || null,
       str(fd, "deadline") || null,
+      str(fd, "tutor_id") || null,
     ]
   );
   revalidatePath("/treinamentos");
@@ -371,6 +372,18 @@ export async function submitQuizAction(fd: FormData) {
   redirect(`/treinamentos/${trainingId}/quiz?score=${score}`);
 }
 
+// ---- Definir o tutor de dúvidas do curso ----
+export async function setCourseTutorAction(fd: FormData) {
+  await requireManage();
+  const trainingId = str(fd, "training_id");
+  if (!trainingId) return;
+  await query(`UPDATE trainings SET tutor_id=$2 WHERE id=$1`, [
+    trainingId,
+    str(fd, "tutor_id") || null,
+  ]);
+  revalidatePath(`/treinamentos/${trainingId}`);
+}
+
 // ---- Fórum ----
 export async function addForumPostAction(fd: FormData) {
   const user = await getCurrentUser();
@@ -378,10 +391,33 @@ export async function addForumPostAction(fd: FormData) {
   const trainingId = str(fd, "training_id");
   const body = str(fd, "body");
   if (!trainingId || !body) return;
-  await query(
+  const rows = await query<{ id: string }>(
     `INSERT INTO training_forum (training_id, user_id, author_name, parent_id, body)
-     VALUES ($1,$2,$3,$4,$5)`,
+     VALUES ($1,$2,$3,$4,$5) RETURNING id`,
     [trainingId, user.id, user.name, str(fd, "parent_id") || null, body]
   );
+  const postId = rows[0]?.id;
+
+  // Menções @usuário: marca cada usuário citado (recebe alerta "Fórum").
+  if (postId) {
+    const tokens = Array.from(
+      new Set((body.match(/@([a-zA-Z0-9._-]+)/g) || []).map((t) => t.slice(1).toLowerCase()))
+    );
+    for (const tok of tokens) {
+      const u = await query<{ id: string }>(
+        `SELECT id FROM users
+         WHERE lower(username) = $1 OR lower(split_part(name,' ',1)) = $1
+         LIMIT 1`,
+        [tok]
+      );
+      if (u[0] && u[0].id !== user.id) {
+        await query(
+          `INSERT INTO training_forum_mentions (post_id, user_id)
+           VALUES ($1,$2) ON CONFLICT DO NOTHING`,
+          [postId, u[0].id]
+        );
+      }
+    }
+  }
   revalidatePath(`/treinamentos/${trainingId}`);
 }
