@@ -11,6 +11,7 @@ import {
   generateCourseContent,
   generatePostImage,
   generateSlides,
+  rateForumAnswer,
 } from "@/lib/ai";
 
 export type AiQuizState = { error?: string; created?: number };
@@ -372,6 +373,39 @@ export async function submitQuizAction(fd: FormData) {
   redirect(`/treinamentos/${trainingId}/quiz?score=${score}`);
 }
 
+// ---- Avaliação do tutor e participantes pelo aluno que concluiu ----
+export async function rateTrainingAction(fd: FormData) {
+  const user = await getCurrentUser();
+  if (!user) return;
+  const trainingId = str(fd, "training_id");
+  if (!trainingId) return;
+  // Só quem concluiu (aprovado) o curso pode avaliar.
+  const done = await query(
+    `SELECT 1 FROM training_completions WHERE training_id=$1 AND user_id=$2 AND passed`,
+    [trainingId, user.id]
+  );
+  if (done.length === 0) return;
+
+  // Cada avaliado vem como "userId:role"; a nota vem em score_<userId>.
+  const ratees = fd.getAll("ratee").map(String);
+  for (const r of ratees) {
+    const [uid, role] = r.split(":");
+    if (!uid || uid === user.id) continue;
+    const raw = str(fd, `score_${uid}`);
+    if (raw === "") continue; // "não avaliar"
+    const score = Number(raw);
+    if (!Number.isFinite(score) || score < 0 || score > 5) continue;
+    await query(
+      `INSERT INTO training_ratings (training_id, rater_id, rated_user_id, role, score)
+       VALUES ($1,$2,$3,$4,$5)
+       ON CONFLICT (training_id, rater_id, rated_user_id)
+       DO UPDATE SET score=EXCLUDED.score, role=EXCLUDED.role, created_at=now()`,
+      [trainingId, user.id, uid, role === "TUTOR" ? "TUTOR" : "PARTICIPANT", score]
+    );
+  }
+  revalidatePath(`/treinamentos/${trainingId}`);
+}
+
 // ---- Definir o tutor de dúvidas do curso ----
 export async function setCourseTutorAction(fd: FormData) {
   await requireManage();
@@ -391,12 +425,28 @@ export async function addForumPostAction(fd: FormData) {
   const trainingId = str(fd, "training_id");
   const body = str(fd, "body");
   if (!trainingId || !body) return;
+  const parentId = str(fd, "parent_id") || null;
   const rows = await query<{ id: string }>(
     `INSERT INTO training_forum (training_id, user_id, author_name, parent_id, body)
      VALUES ($1,$2,$3,$4,$5) RETURNING id`,
-    [trainingId, user.id, user.name, str(fd, "parent_id") || null, body]
+    [trainingId, user.id, user.name, parentId, body]
   );
   const postId = rows[0]?.id;
+
+  // Resposta (tem parent): a IA avalia a qualidade (0-100), best-effort.
+  if (postId && parentId) {
+    const parent = await query<{ body: string }>(
+      `SELECT body FROM training_forum WHERE id=$1`,
+      [parentId]
+    );
+    const quality = await rateForumAnswer(parent[0]?.body ?? "", body);
+    if (quality != null) {
+      await query(`UPDATE training_forum SET quality=$2 WHERE id=$1`, [
+        postId,
+        quality,
+      ]);
+    }
+  }
 
   // Menções @usuário: marca cada usuário citado (recebe alerta "Fórum").
   if (postId) {

@@ -78,6 +78,7 @@ export default async function TreinamentosPage() {
               <th className="px-4 py-3 font-medium">Categoria</th>
               <th className="px-4 py-3 font-medium">Concluídos</th>
               <th className="px-4 py-3 font-medium">Média</th>
+              <th className="px-4 py-3 font-medium">Fórum</th>
               <th className="px-4 py-3 font-medium">Participação</th>
             </tr>
           </thead>
@@ -103,6 +104,22 @@ export default async function TreinamentosPage() {
                 </td>
                 <td className="px-4 py-3 text-slate-600">
                   {r.avg_score == null ? "—" : `${r.avg_score}%`}
+                </td>
+                <td className="px-4 py-3 text-slate-600">
+                  {r.rating_avg == null && r.answer_quality == null ? (
+                    "—"
+                  ) : (
+                    <span
+                      className="whitespace-nowrap"
+                      title="Nota recebida dos alunos · qualidade das respostas (IA) · tempo médio de resposta como tutor"
+                    >
+                      {r.rating_avg != null ? `⭐ ${r.rating_avg}` : ""}
+                      {r.answer_quality != null ? ` · IA ${r.answer_quality}%` : ""}
+                      {r.avg_response_min != null
+                        ? ` · ⏱ ${r.avg_response_min}min`
+                        : ""}
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-slate-600">{r.participation} pts</td>
               </tr>

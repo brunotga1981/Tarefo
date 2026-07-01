@@ -200,10 +200,12 @@ export async function getCourseAccesses(
 // ---- Fórum ----
 export type ForumPost = {
   id: string;
+  user_id: string | null;
   author_name: string;
   body: string;
   created_at: string;
   parent_id: string | null;
+  quality?: number | null;
 };
 
 export async function getForum(courseId: string): Promise<{
@@ -211,7 +213,8 @@ export async function getForum(courseId: string): Promise<{
   answers: ForumPost[];
 }[]> {
   const all = await query<ForumPost>(
-    `SELECT id, author_name, body, created_at, parent_id FROM training_forum
+    `SELECT id, user_id, author_name, body, created_at, parent_id, quality
+     FROM training_forum
      WHERE training_id=$1 ORDER BY created_at ASC`,
     [courseId]
   );
@@ -220,6 +223,21 @@ export async function getForum(courseId: string): Promise<{
     question: q,
     answers: all.filter((a) => a.parent_id === q.id),
   }));
+}
+
+/** Notas que o usuário já deu (por avaliado) neste curso, para pré-preencher. */
+export async function getMyTrainingRatings(
+  trainingId: string,
+  raterId: string
+): Promise<Record<string, number>> {
+  const rows = await query<{ rated_user_id: string; score: number }>(
+    `SELECT rated_user_id, score FROM training_ratings
+     WHERE training_id=$1 AND rater_id=$2`,
+    [trainingId, raterId]
+  );
+  const map: Record<string, number> = {};
+  for (const r of rows) map[r.rated_user_id] = r.score;
+  return map;
 }
 
 // ---- Ranking / categorias ----
@@ -234,6 +252,10 @@ export type RankRow = {
   questions: number;
   answers: number;
   overdue: number;
+  // Métricas do fórum
+  answer_quality: number | null; // média da qualidade (IA) das respostas
+  rating_avg: number | null; // média das notas recebidas (0-5)
+  avg_response_min: number | null; // tempo médio de resposta como tutor (min)
   participation: number;
 };
 
@@ -266,6 +288,9 @@ export async function getRanking(): Promise<RankRow[]> {
     questions: number;
     answers: number;
     overdue: number;
+    answer_quality: number | null;
+    rating_avg: number | null;
+    avg_response_min: number | null;
   }>(
     `SELECT u.id, u.name,
        (SELECT count(*)::int FROM training_completions c WHERE c.user_id=u.id AND c.passed) AS done,
@@ -277,17 +302,44 @@ export async function getRanking(): Promise<RankRow[]> {
           WHERE t.mandatory AND t.deadline IS NOT NULL AND t.deadline < now()::date
             AND NOT EXISTS (SELECT 1 FROM training_completions c
                             WHERE c.training_id=t.id AND c.user_id=u.id AND c.passed)
-       ) AS overdue
+       ) AS overdue,
+       (SELECT round(avg(quality))::int FROM training_forum f
+          WHERE f.user_id=u.id AND f.parent_id IS NOT NULL AND f.quality IS NOT NULL) AS answer_quality,
+       (SELECT round(avg(score)::numeric,1)::float FROM training_ratings tr WHERE tr.rated_user_id=u.id) AS rating_avg,
+       (SELECT round(avg(EXTRACT(EPOCH FROM (fa.first_ans - q.created_at))/60))::int
+          FROM training_forum q
+          JOIN trainings t ON t.id=q.training_id AND t.tutor_id=u.id
+          JOIN LATERAL (SELECT min(a.created_at) AS first_ans FROM training_forum a
+                        WHERE a.parent_id=q.id AND a.user_id=u.id) fa ON true
+          WHERE q.parent_id IS NULL AND fa.first_ans IS NOT NULL) AS avg_response_min
      FROM users u`
   );
 
   return rows
     .map((r) => {
       const percent = total > 0 ? Math.round((r.done / total) * 100) : 0;
-      // Participação: perguntas (+2), respostas (+3), bônus por curso aprovado (+5)
-      // e penalidade por curso obrigatório vencido (-15)
+      // Bônus do fórum: qualidade média das respostas (IA), nota recebida dos
+      // alunos e agilidade de resposta como tutor.
+      const qualityBonus = Math.round((r.answer_quality ?? 0) / 10); // 0-10
+      const ratingBonus = Math.round((r.rating_avg ?? 0) * 4); // 0-20
+      const responseBonus =
+        r.avg_response_min == null
+          ? 0
+          : r.avg_response_min <= 60
+            ? 10
+            : r.avg_response_min <= 240
+              ? 5
+              : 0;
+      // Participação: perguntas (+2), respostas (+3), curso aprovado (+5),
+      // qualidade/nota/agilidade do fórum e penalidade por obrigatório vencido (-15)
       const participation =
-        r.questions * 2 + r.answers * 3 + r.done * 5 - r.overdue * OVERDUE_PENALTY;
+        r.questions * 2 +
+        r.answers * 3 +
+        r.done * 5 +
+        qualityBonus +
+        ratingBonus +
+        responseBonus -
+        r.overdue * OVERDUE_PENALTY;
       return {
         ...r,
         total,

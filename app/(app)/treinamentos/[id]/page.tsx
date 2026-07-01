@@ -11,6 +11,7 @@ import {
   getForum,
   registerCourseView,
   getCourseAccesses,
+  getMyTrainingRatings,
   MATERIAL_KINDS,
   MATERIAL_LABEL,
   MATERIAL_ICON,
@@ -38,6 +39,7 @@ import {
   deleteCourseAction,
   addForumPostAction,
   setCourseTutorAction,
+  rateTrainingAction,
 } from "../actions";
 
 const field =
@@ -78,7 +80,7 @@ export default async function CourseDetailPage({
   await registerCourseView(course.id, user.id);
   await markForumRead(user.id, course.id);
 
-  const [materials, questions, completion, forum, accesses, users] =
+  const [materials, questions, completion, forum, accesses, users, myRatings] =
     await Promise.all([
       getMaterials(course.id),
       getQuestions(course.id),
@@ -88,8 +90,27 @@ export default async function CourseDetailPage({
       canManage
         ? listUsersBasic()
         : Promise.resolve([] as Awaited<ReturnType<typeof listUsersBasic>>),
+      getMyTrainingRatings(course.id, user.id),
     ]);
   const totalAccesses = accesses.reduce((s, a) => s + a.count, 0);
+
+  // Pessoas que o aluno pode avaliar: tutor + demais participantes do fórum
+  // (autores de perguntas/respostas), exceto ele mesmo.
+  const ratees: { id: string; name: string; role: "TUTOR" | "PARTICIPANT" }[] = [];
+  if (course.tutor_id && course.tutor_name && course.tutor_id !== user.id) {
+    ratees.push({ id: course.tutor_id, name: course.tutor_name, role: "TUTOR" });
+  }
+  const seen = new Set(ratees.map((r) => r.id));
+  seen.add(user.id);
+  for (const { question, answers } of forum) {
+    for (const p of [question, ...answers]) {
+      if (p.user_id && !seen.has(p.user_id)) {
+        seen.add(p.user_id);
+        ratees.push({ id: p.user_id, name: p.author_name, role: "PARTICIPANT" });
+      }
+    }
+  }
+  const canRate = !!completion?.passed && ratees.length > 0;
 
   // ---- Aba Conteúdo ----
   const conteudo = (
@@ -390,6 +411,14 @@ export default async function CourseDetailPage({
                 <span className="text-slate-700">
                   <ForumBody text={a.body} />
                 </span>
+                {a.quality != null && (
+                  <span
+                    className="ml-1 rounded-full bg-azul-suave/40 px-1.5 py-0.5 text-[10px] font-semibold text-azul-navy"
+                    title="Qualidade da resposta avaliada por IA"
+                  >
+                    IA {a.quality}%
+                  </span>
+                )}
               </div>
             ))}
           </div>
@@ -412,6 +441,54 @@ export default async function CourseDetailPage({
           </ResetForm>
         </div>
       ))}
+
+      {/* Avaliação do tutor e participantes (aluno que concluiu o curso) */}
+      {canRate && (
+        <form
+          action={rateTrainingAction}
+          className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3"
+        >
+          <input type="hidden" name="training_id" value={course.id} />
+          <p className="text-sm font-semibold text-amber-800">
+            ⭐ Avalie o tutor e os participantes do fórum (0 a 5)
+          </p>
+          <div className="space-y-1.5">
+            {ratees.map((r) => (
+              <div key={r.id} className="flex items-center justify-between gap-2">
+                <span className="text-sm text-slate-700">
+                  {r.name}
+                  {r.role === "TUTOR" && (
+                    <span className="ml-1 rounded-full bg-azul-suave/40 px-1.5 py-0.5 text-[10px] font-semibold text-azul-navy">
+                      tutor
+                    </span>
+                  )}
+                </span>
+                <input type="hidden" name="ratee" value={`${r.id}:${r.role}`} />
+                <select
+                  name={`score_${r.id}`}
+                  defaultValue={
+                    myRatings[r.id] != null ? String(myRatings[r.id]) : ""
+                  }
+                  className="rounded-lg border border-slate-300 px-2 py-1 text-xs outline-none focus:border-azul"
+                >
+                  <option value="">— não avaliar —</option>
+                  {[0, 1, 2, 3, 4, 5].map((n) => (
+                    <option key={n} value={n}>
+                      {n} {"★".repeat(n)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
+          <SubmitButton
+            pendingText="Salvando…"
+            className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 disabled:opacity-60"
+          >
+            Salvar avaliação
+          </SubmitButton>
+        </form>
+      )}
     </div>
   );
 

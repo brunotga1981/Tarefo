@@ -340,6 +340,21 @@ CREATE TABLE IF NOT EXISTS training_forum_mentions (
   PRIMARY KEY (post_id, user_id)
 );
 
+-- Qualidade da resposta do fórum, avaliada por IA (0-100)
+ALTER TABLE training_forum ADD COLUMN IF NOT EXISTS quality integer;
+
+-- Avaliação do tutor e participantes pelo aluno que concluiu o curso (0-5)
+CREATE TABLE IF NOT EXISTS training_ratings (
+  id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  training_id text NOT NULL REFERENCES trainings(id) ON DELETE CASCADE,
+  rater_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  rated_user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role text NOT NULL DEFAULT 'PARTICIPANT', -- TUTOR | PARTICIPANT
+  score integer NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (training_id, rater_id, rated_user_id)
+);
+
 -- Time Line (feed estilo Instagram da Intranet)
 CREATE TABLE IF NOT EXISTS timeline_posts (
   id text PRIMARY KEY DEFAULT gen_random_uuid()::text,

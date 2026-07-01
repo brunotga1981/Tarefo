@@ -137,6 +137,27 @@ export async function generateCourseContent(
   return text.trim();
 }
 
+// Avalia a QUALIDADE de uma resposta do fórum (0-100) via IA. Best-effort:
+// retorna null se a IA não estiver configurada ou falhar.
+export async function rateForumAnswer(
+  question: string,
+  answer: string
+): Promise<number | null> {
+  try {
+    if (!(await aiEnabled())) return null;
+    const prompt =
+      `Avalie de 0 a 100 a QUALIDADE da RESPOSTA a uma dúvida em um fórum de ` +
+      `treinamento (clareza, correção, utilidade e completude). Responda APENAS ` +
+      `com o número.\n\nPERGUNTA: ${question}\n\nRESPOSTA: ${answer}`;
+    const text = await callClaude(prompt, 10);
+    const n = parseInt((text.match(/\d+/) || [""])[0], 10);
+    if (!Number.isFinite(n)) return null;
+    return Math.max(0, Math.min(100, n));
+  } catch {
+    return null;
+  }
+}
+
 // Estrutura o conteúdo do curso em slides para gerar a apresentação.
 export type SlideSpec = { title: string; bullets: string[] };
 export async function generateSlides(
