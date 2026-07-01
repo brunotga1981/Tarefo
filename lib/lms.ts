@@ -149,6 +149,49 @@ export async function getCompletion(
   return rows[0] ?? null;
 }
 
+// ---- Acessos ao conteúdo (quem acessou e quantas vezes) ----
+/** Registra um acesso ao curso. Para não inflar com o auto-refresh da página,
+ *  só conta como novo acesso se o último foi há mais de 30 minutos. */
+export async function registerCourseView(
+  courseId: string,
+  userId: string
+): Promise<void> {
+  await query(
+    `INSERT INTO training_views (training_id, user_id, count)
+     VALUES ($1,$2,1)
+     ON CONFLICT (training_id, user_id) DO UPDATE
+       SET count = training_views.count
+                 + CASE WHEN training_views.last_viewed_at < now() - interval '30 minutes'
+                        THEN 1 ELSE 0 END,
+           last_viewed_at = now()`,
+    [courseId, userId]
+  );
+}
+
+export type CourseAccess = {
+  user_id: string;
+  name: string;
+  count: number;
+  last_viewed_at: string;
+  passed: boolean;
+};
+
+export async function getCourseAccesses(
+  courseId: string
+): Promise<CourseAccess[]> {
+  return query<CourseAccess>(
+    `SELECT v.user_id, u.name, v.count, v.last_viewed_at,
+            COALESCE(c.passed, false) AS passed
+     FROM training_views v
+     JOIN users u ON u.id = v.user_id
+     LEFT JOIN training_completions c
+       ON c.training_id = v.training_id AND c.user_id = v.user_id
+     WHERE v.training_id = $1
+     ORDER BY v.count DESC, v.last_viewed_at DESC`,
+    [courseId]
+  );
+}
+
 // ---- Fórum ----
 export type ForumPost = {
   id: string;

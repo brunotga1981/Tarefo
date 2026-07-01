@@ -9,6 +9,8 @@ import {
   getQuestions,
   getCompletion,
   getForum,
+  registerCourseView,
+  getCourseAccesses,
   MATERIAL_KINDS,
   MATERIAL_LABEL,
   MATERIAL_ICON,
@@ -50,12 +52,17 @@ export default async function CourseDetailPage({
   const course = await getCourse(params.id);
   if (!course) notFound();
 
-  const [materials, questions, completion, forum] = await Promise.all([
+  // Registra o acesso do usuário (para o controle de "quem acessou e quantas vezes").
+  await registerCourseView(course.id, user.id);
+
+  const [materials, questions, completion, forum, accesses] = await Promise.all([
     getMaterials(course.id),
     getQuestions(course.id),
     getCompletion(course.id, user.id),
     getForum(course.id),
+    getCourseAccesses(course.id),
   ]);
+  const totalAccesses = accesses.reduce((s, a) => s + a.count, 0);
 
   // ---- Aba Conteúdo ----
   const conteudo = (
@@ -344,6 +351,73 @@ export default async function CourseDetailPage({
     </div>
   );
 
+  // ---- Aba Acessos (quem acessou e quantas vezes) — visível a todos ----
+  const acessos = (
+    <div>
+      <div className="mb-4 grid grid-cols-2 gap-3">
+        <div className="rounded-xl border border-slate-200 bg-white p-4 text-center">
+          <div className="text-lg font-bold text-azul-navy">{accesses.length}</div>
+          <div className="text-[10px] uppercase text-slate-400">
+            Pessoas que acessaram
+          </div>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-4 text-center">
+          <div className="text-lg font-bold text-azul-navy">{totalAccesses}</div>
+          <div className="text-[10px] uppercase text-slate-400">
+            Total de acessos
+          </div>
+        </div>
+      </div>
+      {accesses.length === 0 ? (
+        <p className="text-xs text-slate-400">Ninguém acessou este curso ainda.</p>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+          <table className="w-full min-w-[420px] text-left text-sm">
+            <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-400">
+              <tr>
+                <th className="px-4 py-2 font-medium">Usuário</th>
+                <th className="px-4 py-2 font-medium">Acessos</th>
+                <th className="px-4 py-2 font-medium">Último acesso</th>
+                <th className="px-4 py-2 font-medium">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {accesses.map((a) => (
+                <tr
+                  key={a.user_id}
+                  className={`border-b border-slate-100 last:border-0 ${
+                    a.user_id === user.id ? "bg-azul-suave/10" : ""
+                  }`}
+                >
+                  <td className="px-4 py-2 font-medium text-slate-700">{a.name}</td>
+                  <td className="px-4 py-2 text-slate-600">{a.count}×</td>
+                  <td className="px-4 py-2 text-slate-500">
+                    {formatDateTime(a.last_viewed_at)}
+                  </td>
+                  <td className="px-4 py-2">
+                    {a.passed ? (
+                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                        ✓ Concluído
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">
+                        em andamento
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p className="mt-3 text-[11px] text-slate-400">
+        Quem já concluiu o curso pode revisitar o conteúdo para consulta quando
+        quiser — os acessos continuam sendo registrados aqui.
+      </p>
+    </div>
+  );
+
   return (
     <div className="mx-auto max-w-4xl">
       <div className="mb-3 flex items-center justify-between">
@@ -407,6 +481,7 @@ export default async function CourseDetailPage({
             { key: "conteudo", label: `Conteúdo (${materials.length})`, content: conteudo },
             { key: "avaliacao", label: "Avaliação / Quiz", content: avaliacao },
             { key: "forum", label: `Fórum (${forum.length})`, content: forumTab },
+            { key: "acessos", label: `Acessos (${accesses.length})`, content: acessos },
           ]}
         />
       </div>

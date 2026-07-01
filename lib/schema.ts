@@ -291,6 +291,16 @@ CREATE TABLE IF NOT EXISTS training_options (
   "order" integer NOT NULL DEFAULT 0
 );
 
+-- Acessos ao conteúdo do curso (quem acessou e quantas vezes)
+CREATE TABLE IF NOT EXISTS training_views (
+  training_id text NOT NULL REFERENCES trainings(id) ON DELETE CASCADE,
+  user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  count integer NOT NULL DEFAULT 1,
+  first_viewed_at timestamptz NOT NULL DEFAULT now(),
+  last_viewed_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (training_id, user_id)
+);
+
 -- Conclusão do curso (resultado do quiz)
 CREATE TABLE IF NOT EXISTS training_completions (
   training_id text NOT NULL REFERENCES trainings(id) ON DELETE CASCADE,
