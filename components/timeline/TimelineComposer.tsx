@@ -2,6 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 import { useRef, useState } from "react";
+import { useFormStatus } from "react-dom";
 import { EmojiInsert } from "@/components/EmojiInsert";
 import {
   createTimelinePostAction,
@@ -13,6 +14,30 @@ import type { Highlight } from "@/lib/timeline-types";
 const field =
   "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-azul";
 
+/** Botão de publicar + indicador de processamento. Usa useFormStatus para
+ *  refletir o estado real da Server Action (que roda em transição). */
+function PublishButton({ disabled }: { disabled: boolean }) {
+  const { pending } = useFormStatus();
+  return (
+    <div className="flex items-center gap-3">
+      <button
+        disabled={disabled || pending}
+        className="inline-flex items-center gap-2 rounded-lg bg-azul-navy px-4 py-2 text-sm font-semibold text-white hover:bg-azul disabled:opacity-50"
+      >
+        {pending && (
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+        )}
+        {pending ? "Publicando…" : "Publicar"}
+      </button>
+      {pending && (
+        <span className="text-xs text-slate-500">
+          ⏳ Em processamento, aguarde…
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function TimelineComposer({ highlights }: { highlights: Highlight[] }) {
   const [body, setBody] = useState("");
   const [topic, setTopic] = useState("");
@@ -21,7 +46,6 @@ export function TimelineComposer({ highlights }: { highlights: Highlight[] }) {
   const [copyLoading, setCopyLoading] = useState(false);
   const [imgLoading, setImgLoading] = useState(false);
   const [aiError, setAiError] = useState("");
-  const [publishing, setPublishing] = useState(false);
   const [isVideo, setIsVideo] = useState(false);
   const publishingRef = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -58,7 +82,6 @@ export function TimelineComposer({ highlights }: { highlights: Highlight[] }) {
     // Trava síncrona contra cliques repetidos (evita publicação duplicada)
     if (publishingRef.current) return;
     publishingRef.current = true;
-    setPublishing(true);
     try {
       await createTimelinePostAction(fd);
       // Limpa o formulário para uma nova postagem
@@ -70,7 +93,6 @@ export function TimelineComposer({ highlights }: { highlights: Highlight[] }) {
       setAiError("");
       formRef.current?.reset();
     } finally {
-      setPublishing(false);
       publishingRef.current = false;
     }
   }
@@ -141,9 +163,9 @@ export function TimelineComposer({ highlights }: { highlights: Highlight[] }) {
             name="body"
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            rows={3}
+            rows={4}
             required
-            placeholder="Escreva a notícia/legenda…"
+            placeholder={"Título na 1ª linha (fica em destaque)…\nDepois, a legenda nas linhas seguintes."}
             className={`${field} pr-9`}
           />
           <EmojiInsert
@@ -255,22 +277,7 @@ export function TimelineComposer({ highlights }: { highlights: Highlight[] }) {
           </div>
         )}
 
-        <div className="flex items-center gap-3">
-          <button
-            disabled={!body.trim() || publishing}
-            className="inline-flex items-center gap-2 rounded-lg bg-azul-navy px-4 py-2 text-sm font-semibold text-white hover:bg-azul disabled:opacity-50"
-          >
-            {publishing && (
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-            )}
-            {publishing ? "Publicando…" : "Publicar"}
-          </button>
-          {publishing && (
-            <span className="text-xs text-slate-500">
-              ⏳ Em processamento, aguarde…
-            </span>
-          )}
-        </div>
+        <PublishButton disabled={!body.trim()} />
       </form>
     </div>
   );

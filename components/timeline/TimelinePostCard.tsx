@@ -18,22 +18,29 @@ function initials(name: string) {
   return name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 }
 
-/** Legenda: primeira linha em CAIXA ALTA e negrito (título); restante normal. */
+/** Legenda: quando houver título (1ª linha) + corpo, a 1ª linha fica em CAIXA
+ *  ALTA e negrito e o restante normal. Legenda de uma linha só = texto normal. */
 function Caption({ text }: { text: string }) {
   const trimmed = text.replace(/^\n+/, "");
   const nl = trimmed.indexOf("\n");
-  const title = nl === -1 ? trimmed : trimmed.slice(0, nl);
+  const firstLine = nl === -1 ? trimmed : trimmed.slice(0, nl);
   const rest = nl === -1 ? "" : trimmed.slice(nl + 1);
+  // Só destaca o título se houver de fato um corpo abaixo dele.
+  const hasTitle = !!firstLine.trim() && !!rest.trim();
   return (
     <div className="px-3 pb-2 pt-2">
-      <p className="text-sm font-bold uppercase leading-snug text-slate-800">
-        {title}
-      </p>
-      {rest.trim() && (
-        <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
-          {rest}
+      {hasTitle && (
+        <p className="text-sm font-bold uppercase leading-snug text-slate-800">
+          {firstLine}
         </p>
       )}
+      <p
+        className={`whitespace-pre-wrap text-sm leading-relaxed text-slate-700 ${
+          hasTitle ? "mt-1" : ""
+        }`}
+      >
+        {hasTitle ? rest : trimmed}
+      </p>
     </div>
   );
 }
