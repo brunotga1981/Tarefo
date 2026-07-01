@@ -28,6 +28,7 @@ import { AiQuizForm } from "@/components/AiQuizForm";
 import { AiContentForm } from "@/components/AiContentForm";
 import { AiImageForm } from "@/components/AiImageForm";
 import { CourseContentEditor } from "@/components/CourseContentEditor";
+import { CourseContentReader } from "@/components/CourseContentReader";
 import { AiSlidesForm } from "@/components/AiSlidesForm";
 import { SlidesViewer } from "@/components/SlidesViewer";
 import { PublishCourseForm } from "@/components/PublishCourseForm";
@@ -124,16 +125,7 @@ export default async function CourseDetailPage({
   // ---- Aba Conteúdo ----
   const conteudo = (
     <div className="space-y-2">
-      {/* Leitura do conteúdo (alunos) */}
-      {!canManage && (
-        <CourseContentEditor
-          trainingId={course.id}
-          content={course.content}
-          canManage={false}
-        />
-      )}
-
-      {/* Apresentação (slides) — gerar (gestor) e ver (todos); baixar só admin */}
+      {/* Apresentação (slides) — no topo. Gerar (gestor) e ver (todos); baixar só admin */}
       {(canManage || (course.slides?.length ?? 0) > 0) && (
         <div className="space-y-2 rounded-lg border border-azul-suave bg-azul-suave/10 p-3">
           <p className="text-xs font-semibold text-azul-navy">
@@ -160,6 +152,12 @@ export default async function CourseDetailPage({
           )}
         </div>
       )}
+
+      {/* Leitura do conteúdo (alunos) — abaixo da apresentação, com ver mais/menos */}
+      {!canManage && course.content && (
+        <CourseContentReader content={course.content} />
+      )}
+
       {materials.length === 0 && (
         <p className="text-xs text-slate-400">Nenhum material cadastrado.</p>
       )}
