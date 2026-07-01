@@ -53,7 +53,7 @@ export function NotificationBar({ notif }: { notif: Notifications }) {
         count={notif.treino}
       />
       <Item
-        href="/treinamentos"
+        href={notif.forumLink}
         icon="💭"
         label="Fórum"
         count={notif.forum}

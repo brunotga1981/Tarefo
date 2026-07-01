@@ -68,8 +68,10 @@ function ForumBody({ text }: { text: string }) {
 
 export default async function CourseDetailPage({
   params,
+  searchParams,
 }: {
   params: { id: string };
+  searchParams: { tab?: string };
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
@@ -708,6 +710,7 @@ export default async function CourseDetailPage({
 
       <div className="rounded-xl border border-slate-200 bg-white p-4">
         <Tabs
+          initialKey={searchParams.tab}
           tabs={[
             { key: "conteudo", label: `Conteúdo (${materials.length})`, content: conteudo },
             { key: "avaliacao", label: "Avaliação / Quiz", content: avaliacao },

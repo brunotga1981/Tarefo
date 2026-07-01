@@ -4,10 +4,16 @@ import { useState, type ReactNode } from "react";
 
 export function Tabs({
   tabs,
+  initialKey,
 }: {
   tabs: { key: string; label: ReactNode; content: ReactNode }[];
+  initialKey?: string;
 }) {
-  const [active, setActive] = useState(tabs[0]?.key);
+  const startKey =
+    initialKey && tabs.some((t) => t.key === initialKey)
+      ? initialKey
+      : tabs[0]?.key;
+  const [active, setActive] = useState(startKey);
   return (
     <div>
       <div className="flex flex-wrap gap-1 border-b border-slate-200">

@@ -7,6 +7,7 @@ export type Notifications = {
   mt: number; // Marcações de Tarefas (MT) pendentes
   treino: number; // treinamentos disponíveis ainda não aprovados
   forum: number; // dúvidas do fórum para você (tutor) ou menções (@você)
+  forumLink: string; // link direto para o fórum da dúvida pendente
 };
 
 const ZERO: Notifications = {
@@ -16,6 +17,7 @@ const ZERO: Notifications = {
   mt: 0,
   treino: 0,
   forum: 0,
+  forumLink: "/treinamentos",
 };
 
 export async function getNotifications(userId: string): Promise<Notifications> {
@@ -78,26 +80,29 @@ async function computeNotifications(userId: string): Promise<Notifications> {
     [userId]
   );
 
-  // Fórum: dúvidas em cursos onde sou tutor + menções (@mim), desde a última
-  // vez que li o fórum daquele curso (união evita contar o mesmo post 2x).
-  const forum = await query<{ count: number }>(
-    `SELECT count(*)::int AS count FROM (
-       SELECT f.id FROM training_forum f
+  // Fórum: (a) como TUTOR, dúvidas do meu curso que eu ainda não respondi — o
+  // alerta só cai depois que eu publico a resposta; (b) menções (@mim) ainda não
+  // lidas. Cada item traz o curso, para o link direto e a contagem (união dedup).
+  const forumItems = await query<{ training_id: string; created_at: string }>(
+    `SELECT f.training_id, f.created_at FROM training_forum f
        JOIN trainings t ON t.id = f.training_id AND t.tutor_id = $1
-       LEFT JOIN training_forum_reads r
-         ON r.training_id = f.training_id AND r.user_id = $1
-       WHERE f.user_id IS DISTINCT FROM $1
-         AND f.created_at > COALESCE(r.last_read_at, to_timestamp(0))
-       UNION
-       SELECT f.id FROM training_forum_mentions m
+       WHERE f.parent_id IS NULL AND f.user_id IS DISTINCT FROM $1
+         AND NOT EXISTS (SELECT 1 FROM training_forum a
+                         WHERE a.parent_id = f.id AND a.user_id = $1)
+     UNION
+     SELECT f.training_id, f.created_at FROM training_forum_mentions m
        JOIN training_forum f ON f.id = m.post_id
        LEFT JOIN training_forum_reads r
          ON r.training_id = f.training_id AND r.user_id = $1
        WHERE m.user_id = $1 AND f.user_id IS DISTINCT FROM $1
          AND f.created_at > COALESCE(r.last_read_at, to_timestamp(0))
-     ) x`,
+     ORDER BY created_at DESC`,
     [userId]
   );
+  const forumLink =
+    forumItems.length > 0
+      ? `/treinamentos/${forumItems[0].training_id}?tab=forum`
+      : "/treinamentos";
 
   return {
     torpedo: torpedo[0]?.count ?? 0,
@@ -105,7 +110,8 @@ async function computeNotifications(userId: string): Promise<Notifications> {
     tarefa: tarefa[0]?.count ?? 0,
     mt: mt[0]?.count ?? 0,
     treino: treino[0]?.count ?? 0,
-    forum: forum[0]?.count ?? 0,
+    forum: forumItems.length,
+    forumLink,
   };
 }
 
