@@ -21,11 +21,11 @@ import { getClientRAC } from "@/lib/rac";
 import { markConversationRead } from "@/lib/notifications";
 import { MessageList } from "@/components/torpedo/MessageList";
 import { Composer } from "@/components/torpedo/Composer";
+import { DMList, type DMUser } from "@/components/torpedo/DMList";
 import { RAC } from "@/components/torpedo/RAC";
 import { Tabs } from "@/components/tarefo/Tabs";
 import { AutoRefresh } from "@/components/tarefo/AutoRefresh";
 import {
-  openDMAction,
   openClientChannelAction,
   createGroupChatAction,
   setPresenceAction,
@@ -66,6 +66,23 @@ export default async function TorpedoPage({
     listUnreadDMSenders(user.id),
     listUnreadGroups(user.id),
   ]);
+
+  // Remetentes com mensagens não lidas vão ao topo, por ordem de chegada
+  // (do que espera há mais tempo para o mais recente); os demais seguem por nome.
+  const unreadSenders = others
+    .filter((u) => unreadDM[u.id])
+    .sort(
+      (a, b) =>
+        new Date(unreadDM[a.id].firstAt).getTime() -
+        new Date(unreadDM[b.id].firstAt).getTime()
+    );
+  const readList = others.filter((u) => !unreadDM[u.id]);
+  const dmUsers: DMUser[] = [...unreadSenders, ...readList].map((u) => ({
+    id: u.id,
+    name: u.name,
+    presence: u.presence,
+    unread: unreadDM[u.id]?.count ?? 0,
+  }));
   const rac =
     conversation?.type === "CLIENT" && conversation.client_id
       ? await getClientRAC(conversation.client_id)
@@ -118,37 +135,7 @@ export default async function TorpedoPage({
         </form>
 
         <Section title="Mensagens diretas">
-          {others.map((u) => {
-            const unread = unreadDM[u.id] ?? 0;
-            return (
-              <form key={u.id} action={openDMAction}>
-                <input type="hidden" name="user_id" value={u.id} />
-                <button
-                  className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-slate-100 ${
-                    unread
-                      ? "bg-azul-suave/40 font-semibold text-azul-navy"
-                      : "text-slate-600"
-                  }`}
-                >
-                  <span className="relative">
-                    <Avatar name={u.name} />
-                    <span
-                      className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white ${PRESENCE_DOT[u.presence]}`}
-                    />
-                  </span>
-                  <span className="min-w-0 flex-1 truncate">{u.name}</span>
-                  {unread > 0 && (
-                    <span
-                      className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold text-white"
-                      title={`${unread} mensagem(ns) nova(s)`}
-                    >
-                      {unread}
-                    </span>
-                  )}
-                </button>
-              </form>
-            );
-          })}
+          <DMList users={dmUsers} />
         </Section>
 
         <Section title="Grupos">
@@ -365,19 +352,5 @@ function Section({
       </p>
       <div className="space-y-0.5">{children}</div>
     </div>
-  );
-}
-
-function Avatar({ name }: { name: string }) {
-  const initials = name
-    .split(" ")
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-  return (
-    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-azul-suave text-[10px] font-bold text-azul-navy">
-      {initials}
-    </span>
   );
 }

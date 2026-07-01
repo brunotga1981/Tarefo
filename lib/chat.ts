@@ -27,19 +27,7 @@ export type Message = {
   reactions?: ReactionGroup[];
 };
 
-export const PRESENCE_OPTIONS = [
-  "Disponível",
-  "Ocupado",
-  "Em Reunião",
-  "Indisponível",
-] as const;
-
-export const PRESENCE_DOT: Record<string, string> = {
-  Disponível: "bg-emerald-500",
-  Ocupado: "bg-red-500",
-  "Em Reunião": "bg-amber-500",
-  Indisponível: "bg-slate-400",
-};
+export { PRESENCE_OPTIONS, PRESENCE_DOT } from "./chat-meta";
 
 // Encontra ou cria a conversa 1-a-1 entre dois usuários.
 export async function findOrCreateDM(a: string, b: string): Promise<string> {
@@ -109,13 +97,25 @@ export async function listGroupsFor(userId: string): Promise<Conversation[]> {
   );
 }
 
-/** DMs com mensagens não lidas: mapa { outroUsuarioId -> quantidade }.
- *  Usado para destacar o remetente na lista de usuários do Torpedo. */
+export type UnreadDM = {
+  count: number;
+  firstAt: string; // 1ª mensagem não lida (entrada na fila — ordem de chegada)
+  lastAt: string; // mensagem não lida mais recente
+};
+
+/** DMs com mensagens não lidas: mapa { outroUsuarioId -> info }.
+ *  Usado para destacar o remetente e ordená-lo por ordem de chegada. */
 export async function listUnreadDMSenders(
   userId: string
-): Promise<Record<string, number>> {
-  const rows = await query<{ other_id: string; count: number }>(
-    `SELECT other.user_id AS other_id, count(*)::int AS count
+): Promise<Record<string, UnreadDM>> {
+  const rows = await query<{
+    other_id: string;
+    count: number;
+    first_at: string;
+    last_at: string;
+  }>(
+    `SELECT other.user_id AS other_id, count(*)::int AS count,
+            min(m.created_at) AS first_at, max(m.created_at) AS last_at
      FROM messages m
      JOIN conversations c ON c.id = m.conversation_id AND c.type = 'DM'
      JOIN conversation_members mem ON mem.conversation_id = c.id AND mem.user_id = $1
@@ -126,8 +126,13 @@ export async function listUnreadDMSenders(
      GROUP BY other.user_id`,
     [userId]
   );
-  const map: Record<string, number> = {};
-  for (const r of rows) map[r.other_id] = r.count;
+  const map: Record<string, UnreadDM> = {};
+  for (const r of rows)
+    map[r.other_id] = {
+      count: r.count,
+      firstAt: r.first_at,
+      lastAt: r.last_at,
+    };
   return map;
 }
 
