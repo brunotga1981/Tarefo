@@ -198,13 +198,15 @@ export default async function TreinamentosPage() {
                   href={`/treinamentos/${c.id}`}
                   className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:shadow"
                 >
-                  <div className="h-32 w-full bg-azul-suave/30">
+                  <div className="flex h-40 w-full items-center justify-center bg-azul-suave/30">
                     {c.image_url ? (
-                      <img src={c.image_url} alt={c.title} className="h-32 w-full object-cover" />
+                      <img
+                        src={c.image_url}
+                        alt={c.title}
+                        className="h-40 w-full object-contain"
+                      />
                     ) : (
-                      <div className="flex h-32 items-center justify-center text-4xl text-azul-claro">
-                        🎓
-                      </div>
+                      <div className="text-4xl text-azul-claro">🎓</div>
                     )}
                   </div>
                   <div className="flex flex-1 flex-col p-4">
