@@ -5,6 +5,7 @@ import Link from "next/link";
 import { getCurrentUser, can } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { listCourses, getRanking, TIER_STYLE, type Course } from "@/lib/lms";
+import { SubmitButton } from "@/components/tarefo/SubmitButton";
 import { createCourseAction } from "./actions";
 
 const field =
@@ -139,9 +140,12 @@ export default async function TreinamentosPage() {
                 Prazo para concluir (se obrigatório)
                 <input type="date" name="deadline" className={`${field} mt-1`} />
               </label>
-              <button className="w-full rounded-lg bg-azul-navy px-3 py-2 text-sm font-semibold text-white hover:bg-azul">
+              <SubmitButton
+                pendingText="Criando…"
+                className="w-full rounded-lg bg-azul-navy px-3 py-2 text-sm font-semibold text-white hover:bg-azul disabled:opacity-60"
+              >
                 Criar e configurar
-              </button>
+              </SubmitButton>
             </form>
           </details>
         )}

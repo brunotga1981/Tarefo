@@ -181,6 +181,18 @@ export async function generateContentAction(
   }
 }
 
+// ---- Editar/salvar o conteúdo do curso (após geração pela IA) ----
+export async function updateCourseContentAction(fd: FormData) {
+  await requireManage();
+  const trainingId = str(fd, "training_id");
+  if (!trainingId) return;
+  await query(`UPDATE trainings SET content=$2 WHERE id=$1`, [
+    trainingId,
+    str(fd, "content") || null,
+  ]);
+  revalidatePath(`/treinamentos/${trainingId}`);
+}
+
 // ---- Gerar imagem de capa do curso com IA (OpenAI/ChatGPT) ----
 export async function generateCourseImageAction(
   _prev: AiImageState,

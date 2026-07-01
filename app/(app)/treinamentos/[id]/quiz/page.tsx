@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getCourse, getQuestions, PASS_SCORE } from "@/lib/lms";
+import { SubmitButton } from "@/components/tarefo/SubmitButton";
 import { submitQuizAction } from "../../actions";
 
 export default async function QuizPage({
@@ -107,9 +108,12 @@ export default async function QuizPage({
             </div>
           </div>
         ))}
-        <button className="rounded-lg bg-azul-navy px-6 py-2.5 text-sm font-semibold text-white hover:bg-azul">
+        <SubmitButton
+          pendingText="Enviando respostas…"
+          className="rounded-lg bg-azul-navy px-6 py-2.5 text-sm font-semibold text-white hover:bg-azul disabled:opacity-60"
+        >
           Enviar respostas
-        </button>
+        </SubmitButton>
       </form>
     </div>
   );

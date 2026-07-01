@@ -123,12 +123,16 @@ export async function generateCourseContent(
   difficulty: string
 ): Promise<string> {
   const prompt =
-    `Você é um instrutor. Elabore o CONTEÚDO DIDÁTICO de um curso interno em português do Brasil, ` +
-    `bem estruturado (introdução, tópicos com explicações e conclusão), nível ${difficulty}. ` +
+    `Você é um instrutor. Elabore o CONTEÚDO DIDÁTICO COMPLETO e APROFUNDADO de um ` +
+    `curso interno em português do Brasil, bem estruturado (introdução, vários tópicos ` +
+    `com explicações detalhadas, exemplos práticos e conclusão), nível ${difficulty}. ` +
     `Título do curso: "${title}".\n\n` +
     `Use o material de referência a seguir (anexos/observações) como base:\n${reference}\n\n` +
-    `Responda apenas com o conteúdo do curso em texto (pode usar títulos e listas).`;
-  const text = await callClaude(prompt, 3000);
+    `Seja extenso e didático — não resuma em excesso. Escreva o conteúdo até o fim, ` +
+    `sem cortar frases ou tópicos no meio. Responda apenas com o conteúdo do curso em ` +
+    `texto (pode usar títulos e listas).`;
+  // Limite ampliado para evitar perda/corte de conteúdo em cursos longos.
+  const text = await callClaude(prompt, 16000);
   if (!text.trim()) throw new Error("A IA não retornou conteúdo.");
   return text.trim();
 }

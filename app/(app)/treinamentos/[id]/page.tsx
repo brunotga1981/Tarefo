@@ -21,6 +21,8 @@ import { ResetForm } from "@/components/tarefo/ResetForm";
 import { AiQuizForm } from "@/components/AiQuizForm";
 import { AiContentForm } from "@/components/AiContentForm";
 import { AiImageForm } from "@/components/AiImageForm";
+import { CourseContentEditor } from "@/components/CourseContentEditor";
+import { SubmitButton } from "@/components/tarefo/SubmitButton";
 import { formatDate } from "@/lib/format";
 import {
   addMaterialAction,
@@ -56,16 +58,11 @@ export default async function CourseDetailPage({
   // ---- Aba Conteúdo ----
   const conteudo = (
     <div className="space-y-2">
-      {course.content && (
-        <div className="mb-3 rounded-lg border border-slate-100 bg-white p-4">
-          <h4 className="mb-1 text-xs font-semibold uppercase text-slate-400">
-            Conteúdo do curso
-          </h4>
-          <div className="whitespace-pre-wrap text-sm leading-relaxed text-slate-700">
-            {course.content}
-          </div>
-        </div>
-      )}
+      <CourseContentEditor
+        trainingId={course.id}
+        content={course.content}
+        canManage={canManage}
+      />
       {canManage && <AiContentForm trainingId={course.id} />}
       {materials.length === 0 && (
         <p className="text-xs text-slate-400">Nenhum material cadastrado.</p>
@@ -130,9 +127,12 @@ export default async function CourseDetailPage({
           <input name="url" placeholder="URL (vídeo/link)" className={field} />
           <input type="file" name="file" className={field} />
           <div className="sm:col-span-2">
-            <button className="rounded-lg bg-azul px-3 py-1.5 text-xs font-semibold text-white hover:bg-azul-navy">
+            <SubmitButton
+              pendingText="Adicionando…"
+              className="rounded-lg bg-azul px-3 py-1.5 text-xs font-semibold text-white hover:bg-azul-navy disabled:opacity-60"
+            >
               Adicionar material
-            </button>
+            </SubmitButton>
           </div>
         </ResetForm>
       )}
@@ -236,9 +236,12 @@ export default async function CourseDetailPage({
                 ))}
               </select>
             </label>
-            <button className="rounded-lg bg-azul px-3 py-1.5 text-xs font-semibold text-white hover:bg-azul-navy">
+            <SubmitButton
+              pendingText="Adicionando…"
+              className="rounded-lg bg-azul px-3 py-1.5 text-xs font-semibold text-white hover:bg-azul-navy disabled:opacity-60"
+            >
               Adicionar questão
-            </button>
+            </SubmitButton>
           </ResetForm>
         </div>
       )}
@@ -257,9 +260,12 @@ export default async function CourseDetailPage({
           placeholder="Faça uma pergunta sobre este curso…"
           className={field}
         />
-        <button className="rounded-lg bg-azul px-3 py-1.5 text-xs font-semibold text-white hover:bg-azul-navy">
+        <SubmitButton
+          pendingText="Publicando…"
+          className="rounded-lg bg-azul px-3 py-1.5 text-xs font-semibold text-white hover:bg-azul-navy disabled:opacity-60"
+        >
           Publicar pergunta
-        </button>
+        </SubmitButton>
       </ResetForm>
 
       {forum.length === 0 && (
@@ -300,9 +306,12 @@ export default async function CourseDetailPage({
               placeholder="Responder…"
               className="flex-1 rounded-lg border border-slate-300 px-2 py-1 text-sm outline-none focus:border-azul"
             />
-            <button className="rounded bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-700">
+            <SubmitButton
+              pendingText="Enviando…"
+              className="rounded bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+            >
               Responder
-            </button>
+            </SubmitButton>
           </ResetForm>
         </div>
       ))}
