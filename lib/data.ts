@@ -176,7 +176,7 @@ export async function listUsersBasic(): Promise<
 > {
   return query(
     `SELECT id, name, username, COALESCE(presence,'Disponível') AS presence
-     FROM users ORDER BY name`
+     FROM users WHERE active ORDER BY name`
   );
 }
 

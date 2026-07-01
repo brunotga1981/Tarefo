@@ -52,6 +52,7 @@ export type Course = {
   mandatory: boolean;
   group_id: string | null;
   group_name?: string | null;
+  verticals?: string[];
   deadline: string | null;
   tutor_id?: string | null;
   tutor_name?: string | null;
@@ -116,7 +117,7 @@ export async function listCourses(
 export async function getCourse(id: string): Promise<Course | null> {
   const rows = await query<Course>(
     `SELECT t.id, t.title, t.theme, t.subtheme, t.description, t.content, t.image_url,
-       t.mandatory, t.group_id, t.deadline, t.slides, t.tutor_id, t.published,
+       t.mandatory, t.group_id, t.verticals, t.deadline, t.slides, t.tutor_id, t.published,
        g.name AS group_name, tu.name AS tutor_name
      FROM trainings t
      LEFT JOIN groups g ON g.id = t.group_id
@@ -347,10 +348,12 @@ export async function getRanking(): Promise<RankRow[]> {
        (SELECT count(*)::int FROM training_forum f WHERE f.user_id=u.id AND f.parent_id IS NULL) AS questions,
        (SELECT count(*)::int FROM training_forum f WHERE f.user_id=u.id AND f.parent_id IS NOT NULL) AS answers,
        (SELECT count(*)::int FROM trainings t
-          JOIN group_members gm ON gm.group_id=t.group_id AND gm.user_id=u.id
           WHERE t.mandatory AND t.deadline IS NOT NULL AND t.deadline < now()::date
             AND NOT EXISTS (SELECT 1 FROM training_completions c
                             WHERE c.training_id=t.id AND c.user_id=u.id AND c.passed)
+            AND ( EXISTS (SELECT 1 FROM group_members gm
+                          WHERE gm.group_id=t.group_id AND gm.user_id=u.id)
+                  OR u.vertical && t.verticals )
        ) AS overdue,
        (SELECT round(avg(quality))::int FROM training_forum f
           WHERE f.user_id=u.id AND f.parent_id IS NOT NULL AND f.quality IS NOT NULL) AS answer_quality,

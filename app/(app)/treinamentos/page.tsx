@@ -12,6 +12,7 @@ import {
   type Course,
 } from "@/lib/lms";
 import { formatDateTime } from "@/lib/format";
+import { VERTICALS } from "@/lib/users-meta";
 import { SubmitButton } from "@/components/tarefo/SubmitButton";
 import { ScoreBreakdown } from "@/components/ScoreBreakdown";
 import { createCourseAction } from "./actions";
@@ -30,7 +31,9 @@ export default async function TreinamentosPage() {
       ? query<{ id: string; name: string }>(`SELECT id, name FROM groups ORDER BY name`)
       : Promise.resolve([] as { id: string; name: string }[]),
     canManage
-      ? query<{ id: string; name: string }>(`SELECT id, name FROM users ORDER BY name`)
+      ? query<{ id: string; name: string }>(
+          `SELECT id, name FROM users WHERE active ORDER BY name`
+        )
       : Promise.resolve([] as { id: string; name: string }[]),
   ]);
   const me = ranking.find((r) => r.id === user!.id);
@@ -185,17 +188,37 @@ export default async function TreinamentosPage() {
               <input name="subtheme" placeholder="Subtema" className={field} />
               <textarea name="description" rows={2} placeholder="Descrição" className={field} />
               <input name="image_url" placeholder="URL de imagem (opcional)" className={field} />
+              {/* Público-alvo: a quem o treinamento se destina */}
+              <div className="rounded-lg border border-slate-100 bg-slate-50 p-2">
+                <p className="mb-1 text-[11px] font-semibold uppercase text-slate-400">
+                  Público-alvo (verticais)
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {VERTICALS.map((v) => (
+                    <label
+                      key={v}
+                      className="flex items-center gap-1 text-[11px] text-slate-600"
+                    >
+                      <input type="checkbox" name="verticals" value={v} /> {v}
+                    </label>
+                  ))}
+                </div>
+                <select name="group_id" className={`${field} mt-2`} defaultValue="">
+                  <option value="">Equipe (opcional)…</option>
+                  {groups.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-[10px] text-slate-400">
+                  Sem vertical/equipe = destinado a todos.
+                </p>
+              </div>
               <label className="flex items-center gap-2 text-xs text-slate-600">
-                <input type="checkbox" name="mandatory" /> Curso obrigatório
+                <input type="checkbox" name="mandatory" /> Curso obrigatório para o
+                público-alvo
               </label>
-              <select name="group_id" className={field} defaultValue="">
-                <option value="">Equipe obrigada (se obrigatório)…</option>
-                {groups.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.name}
-                  </option>
-                ))}
-              </select>
               <label className="block text-xs text-slate-500">
                 Prazo para concluir (se obrigatório)
                 <input type="date" name="deadline" className={`${field} mt-1`} />

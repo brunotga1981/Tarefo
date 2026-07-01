@@ -682,7 +682,16 @@ export default async function CourseDetailPage({
           )}
           {course.mandatory && (
             <span className="rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700">
-              Obrigatório{course.group_name ? ` · ${course.group_name}` : ""}
+              Obrigatório
+            </span>
+          )}
+          {/* Público-alvo: verticais e/ou equipe */}
+          {(course.verticals?.length || course.group_name) && (
+            <span className="rounded-full bg-azul-suave/40 px-2 py-0.5 text-[11px] font-medium text-azul-navy">
+              🎯{" "}
+              {[...(course.verticals ?? []), course.group_name]
+                .filter(Boolean)
+                .join(", ")}
             </span>
           )}
           {course.mandatory && course.deadline && (

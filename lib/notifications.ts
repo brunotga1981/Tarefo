@@ -70,13 +70,23 @@ async function computeNotifications(userId: string): Promise<Notifications> {
     [userId]
   );
 
-  // Treinamentos disponíveis ainda não aprovados pelo usuário (some quando aprova).
+  // Treinamentos que são OBRIGATÓRIOS para este usuário (pelo seu público-alvo:
+  // vertical ou equipe) e que ele ainda não concluiu. Curso não obrigatório não
+  // é cobrado de ninguém. Obrigatório sem público definido = para todos.
   const treino = await query<{ count: number }>(
     `SELECT count(*)::int AS count FROM trainings t
-     WHERE t.published AND NOT EXISTS (
-       SELECT 1 FROM training_completions c
-       WHERE c.training_id = t.id AND c.user_id = $1 AND c.passed
-     )`,
+     WHERE t.published AND t.mandatory
+       AND NOT EXISTS (
+         SELECT 1 FROM training_completions c
+         WHERE c.training_id = t.id AND c.user_id = $1 AND c.passed
+       )
+       AND (
+         (t.group_id IS NULL AND coalesce(cardinality(t.verticals),0) = 0)
+         OR EXISTS (SELECT 1 FROM group_members gm
+                    WHERE gm.group_id = t.group_id AND gm.user_id = $1)
+         OR EXISTS (SELECT 1 FROM users u
+                    WHERE u.id = $1 AND u.vertical && t.verticals)
+       )`,
     [userId]
   );
 

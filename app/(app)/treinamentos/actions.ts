@@ -39,9 +39,10 @@ export async function createCourseAction(fd: FormData) {
   if (file instanceof File && file.size > 0) {
     imageUrl = (await saveUpload(file, "curso")).url;
   }
+  const verticals = fd.getAll("verticals").map((v) => String(v)).filter(Boolean);
   const rows = await query<{ id: string }>(
-    `INSERT INTO trainings (title, theme, subtheme, description, image_url, mandatory, group_id, deadline, tutor_id, published)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, false) RETURNING id`,
+    `INSERT INTO trainings (title, theme, subtheme, description, image_url, mandatory, group_id, deadline, tutor_id, verticals, published)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, false) RETURNING id`,
     [
       title,
       str(fd, "theme") || null,
@@ -52,6 +53,7 @@ export async function createCourseAction(fd: FormData) {
       str(fd, "group_id") || null,
       str(fd, "deadline") || null,
       str(fd, "tutor_id") || null,
+      verticals,
     ]
   );
   revalidatePath("/treinamentos");

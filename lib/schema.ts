@@ -268,6 +268,8 @@ ALTER TABLE trainings ADD COLUMN IF NOT EXISTS slides jsonb;
 -- Publicação do curso: só fica visível aos usuários depois de finalizado.
 -- Default true para não ocultar cursos já existentes; novos entram como rascunho.
 ALTER TABLE trainings ADD COLUMN IF NOT EXISTS published boolean NOT NULL DEFAULT true;
+-- Público-alvo por vertical (a quem o treinamento se destina)
+ALTER TABLE trainings ADD COLUMN IF NOT EXISTS verticals text[] NOT NULL DEFAULT '{}';
 -- Tutor de dúvidas do fórum do curso
 ALTER TABLE trainings ADD COLUMN IF NOT EXISTS tutor_id text REFERENCES users(id) ON DELETE SET NULL;
 
