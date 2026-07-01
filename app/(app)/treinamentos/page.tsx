@@ -13,6 +13,7 @@ import {
 } from "@/lib/lms";
 import { formatDateTime } from "@/lib/format";
 import { SubmitButton } from "@/components/tarefo/SubmitButton";
+import { ScoreBreakdown } from "@/components/ScoreBreakdown";
 import { createCourseAction } from "./actions";
 
 const field =
@@ -102,9 +103,7 @@ export default async function TreinamentosPage() {
             </span>
           </Stat>
           <Stat label="Score de participação">
-            <span className="text-lg font-bold text-azul-navy">
-              {me.participation} pts
-            </span>
+            <ScoreBreakdown me={me} />
           </Stat>
         </div>
       )}
