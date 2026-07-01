@@ -39,6 +39,8 @@ export function embedUrl(url: string): string | null {
   return null;
 }
 
+export type Slide = { title: string; bullets: string[] };
+
 export type Course = {
   id: string;
   title: string;
@@ -51,6 +53,7 @@ export type Course = {
   group_id: string | null;
   group_name?: string | null;
   deadline: string | null;
+  slides?: Slide[] | null;
   material_count?: number;
   question_count?: number;
   my_passed?: boolean;
@@ -90,7 +93,7 @@ export async function listCourses(userId: string): Promise<Course[]> {
 export async function getCourse(id: string): Promise<Course | null> {
   const rows = await query<Course>(
     `SELECT t.id, t.title, t.theme, t.subtheme, t.description, t.content, t.image_url,
-       t.mandatory, t.group_id, t.deadline, g.name AS group_name
+       t.mandatory, t.group_id, t.deadline, t.slides, g.name AS group_name
      FROM trainings t LEFT JOIN groups g ON g.id = t.group_id
      WHERE t.id=$1`,
     [id]

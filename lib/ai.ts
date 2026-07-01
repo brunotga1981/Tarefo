@@ -137,6 +137,35 @@ export async function generateCourseContent(
   return text.trim();
 }
 
+// Estrutura o conteúdo do curso em slides para gerar a apresentação.
+export type SlideSpec = { title: string; bullets: string[] };
+export async function generateSlides(
+  courseTitle: string,
+  content: string
+): Promise<SlideSpec[]> {
+  const prompt =
+    `Você cria apresentações de treinamento corporativo. Com base no CONTEÚDO ` +
+    `abaixo, gere uma apresentação de slides em português do Brasil para o curso ` +
+    `"${courseTitle}". Crie de 6 a 15 slides objetivos. O primeiro slide é a capa ` +
+    `(título do curso e, opcionalmente, um subtítulo). Cada slide tem um título ` +
+    `curto e de 2 a 5 tópicos (bullets) sucintos. Responda SOMENTE com JSON válido ` +
+    `no formato: {"slides":[{"title":"...","bullets":["...","..."]}]}. ` +
+    `Não inclua texto fora do JSON.\n\nCONTEÚDO:\n${content}`;
+  const text = await callClaude(prompt, 4000);
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start < 0 || end < 0) throw new Error("Resposta da IA inválida.");
+  const parsed = JSON.parse(text.slice(start, end + 1));
+  const slides: SlideSpec[] = (parsed.slides || [])
+    .filter((s: any) => s?.title)
+    .map((s: any) => ({
+      title: String(s.title),
+      bullets: Array.isArray(s.bullets) ? s.bullets.map((b: any) => String(b)) : [],
+    }));
+  if (slides.length === 0) throw new Error("A IA não retornou slides.");
+  return slides;
+}
+
 export async function generateQuizWithAI(
   content: string,
   numQuestions: number,

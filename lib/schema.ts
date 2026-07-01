@@ -263,6 +263,8 @@ ALTER TABLE trainings ADD COLUMN IF NOT EXISTS content text;
 ALTER TABLE trainings ADD COLUMN IF NOT EXISTS mandatory boolean NOT NULL DEFAULT false;
 ALTER TABLE trainings ADD COLUMN IF NOT EXISTS group_id text REFERENCES groups(id) ON DELETE SET NULL;
 ALTER TABLE trainings ADD COLUMN IF NOT EXISTS deadline date;
+-- Apresentação (slides) gerada a partir do conteúdo do curso
+ALTER TABLE trainings ADD COLUMN IF NOT EXISTS slides jsonb;
 
 -- Materiais do curso (vídeo, PDF, PPT, link...)
 CREATE TABLE IF NOT EXISTS training_materials (

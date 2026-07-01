@@ -22,6 +22,8 @@ import { AiQuizForm } from "@/components/AiQuizForm";
 import { AiContentForm } from "@/components/AiContentForm";
 import { AiImageForm } from "@/components/AiImageForm";
 import { CourseContentEditor } from "@/components/CourseContentEditor";
+import { AiSlidesForm } from "@/components/AiSlidesForm";
+import { SlidesViewer } from "@/components/SlidesViewer";
 import { SubmitButton } from "@/components/tarefo/SubmitButton";
 import { formatDate } from "@/lib/format";
 import {
@@ -64,6 +66,30 @@ export default async function CourseDetailPage({
         canManage={canManage}
       />
       {canManage && <AiContentForm trainingId={course.id} />}
+
+      {/* Apresentação (slides) — gerar (gestor) e ver/baixar (todos) */}
+      {(canManage || (course.slides?.length ?? 0) > 0) && (
+        <div className="space-y-2 rounded-lg border border-azul-suave bg-azul-suave/10 p-3">
+          <p className="text-xs font-semibold text-azul-navy">
+            Apresentação do conteúdo (PowerPoint)
+          </p>
+          {course.slides?.length ? (
+            <SlidesViewer trainingId={course.id} slides={course.slides} />
+          ) : (
+            canManage && (
+              <p className="text-xs text-slate-500">
+                Ainda não há apresentação. Gere a partir do conteúdo do curso.
+              </p>
+            )
+          )}
+          {canManage && (
+            <AiSlidesForm
+              trainingId={course.id}
+              hasSlides={(course.slides?.length ?? 0) > 0}
+            />
+          )}
+        </div>
+      )}
       {materials.length === 0 && (
         <p className="text-xs text-slate-400">Nenhum material cadastrado.</p>
       )}

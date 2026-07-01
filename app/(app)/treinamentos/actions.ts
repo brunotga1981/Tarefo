@@ -10,11 +10,13 @@ import {
   generateQuizWithAI,
   generateCourseContent,
   generatePostImage,
+  generateSlides,
 } from "@/lib/ai";
 
 export type AiQuizState = { error?: string; created?: number };
 export type AiContentState = { error?: string; ok?: boolean };
 export type AiImageState = { error?: string; ok?: boolean };
+export type AiSlidesState = { error?: string; created?: number };
 
 async function requireManage() {
   const user = await getCurrentUser();
@@ -191,6 +193,37 @@ export async function updateCourseContentAction(fd: FormData) {
     str(fd, "content") || null,
   ]);
   revalidatePath(`/treinamentos/${trainingId}`);
+}
+
+// ---- Gerar apresentação (slides) a partir do conteúdo do curso ----
+export async function generateSlidesAction(
+  _prev: AiSlidesState,
+  fd: FormData
+): Promise<AiSlidesState> {
+  await requireManage();
+  const trainingId = str(fd, "training_id");
+  if (!trainingId) return { error: "Curso inválido." };
+  const course = await query<{ title: string; content: string | null }>(
+    `SELECT title, content FROM trainings WHERE id=$1`,
+    [trainingId]
+  );
+  const content = course[0]?.content?.trim();
+  if (!content) {
+    return {
+      error: "Gere ou escreva o conteúdo do curso antes de criar a apresentação.",
+    };
+  }
+  try {
+    const slides = await generateSlides(course[0].title, content);
+    await query(`UPDATE trainings SET slides=$2 WHERE id=$1`, [
+      trainingId,
+      JSON.stringify(slides),
+    ]);
+    revalidatePath(`/treinamentos/${trainingId}`);
+    return { created: slides.length };
+  } catch (e: any) {
+    return { error: e?.message ?? "Falha ao gerar a apresentação com IA." };
+  }
 }
 
 // ---- Gerar imagem de capa do curso com IA (OpenAI/ChatGPT) ----
