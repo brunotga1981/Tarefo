@@ -12,6 +12,7 @@ import {
   registerCourseView,
   getCourseAccesses,
   getMyTrainingRatings,
+  courseMissingItems,
   MATERIAL_KINDS,
   MATERIAL_LABEL,
   MATERIAL_ICON,
@@ -29,6 +30,7 @@ import { AiImageForm } from "@/components/AiImageForm";
 import { CourseContentEditor } from "@/components/CourseContentEditor";
 import { AiSlidesForm } from "@/components/AiSlidesForm";
 import { SlidesViewer } from "@/components/SlidesViewer";
+import { PublishCourseForm } from "@/components/PublishCourseForm";
 import { SubmitButton } from "@/components/tarefo/SubmitButton";
 import { formatDate } from "@/lib/format";
 import {
@@ -40,6 +42,7 @@ import {
   addForumPostAction,
   setCourseTutorAction,
   rateTrainingAction,
+  touchCourseAction,
 } from "../actions";
 
 const field =
@@ -71,9 +74,12 @@ export default async function CourseDetailPage({
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   const canManage = can(user, "trainings.manage");
+  const isAdmin = can(user, "access.manage"); // download do .pptx é só do admin
 
   const course = await getCourse(params.id);
   if (!course) notFound();
+  // Cursos em rascunho (não publicados) só são acessíveis a quem gerencia.
+  if (course.published === false && !canManage) notFound();
 
   // Registra o acesso do usuário e marca o fórum deste curso como lido
   // (limpa o alerta "Fórum" para tutor/mencionado após visitar o curso).
@@ -93,6 +99,7 @@ export default async function CourseDetailPage({
       getMyTrainingRatings(course.id, user.id),
     ]);
   const totalAccesses = accesses.reduce((s, a) => s + a.count, 0);
+  const missing = courseMissingItems(course, questions.length);
 
   // Pessoas que o aluno pode avaliar: tutor + demais participantes do fórum
   // (autores de perguntas/respostas), exceto ele mesmo.
@@ -115,21 +122,27 @@ export default async function CourseDetailPage({
   // ---- Aba Conteúdo ----
   const conteudo = (
     <div className="space-y-2">
-      <CourseContentEditor
-        trainingId={course.id}
-        content={course.content}
-        canManage={canManage}
-      />
-      {canManage && <AiContentForm trainingId={course.id} />}
+      {/* Leitura do conteúdo (alunos) */}
+      {!canManage && (
+        <CourseContentEditor
+          trainingId={course.id}
+          content={course.content}
+          canManage={false}
+        />
+      )}
 
-      {/* Apresentação (slides) — gerar (gestor) e ver/baixar (todos) */}
+      {/* Apresentação (slides) — gerar (gestor) e ver (todos); baixar só admin */}
       {(canManage || (course.slides?.length ?? 0) > 0) && (
         <div className="space-y-2 rounded-lg border border-azul-suave bg-azul-suave/10 p-3">
           <p className="text-xs font-semibold text-azul-navy">
             Apresentação do conteúdo (PowerPoint)
           </p>
           {course.slides?.length ? (
-            <SlidesViewer trainingId={course.id} slides={course.slides} />
+            <SlidesViewer
+              trainingId={course.id}
+              slides={course.slides}
+              canDownload={isAdmin}
+            />
           ) : (
             canManage && (
               <p className="text-xs text-slate-500">
@@ -171,9 +184,12 @@ export default async function CourseDetailPage({
                 <form action={deleteMaterialAction}>
                   <input type="hidden" name="id" value={m.id} />
                   <input type="hidden" name="training_id" value={course.id} />
-                  <button className="text-[11px] text-slate-400 hover:text-red-500">
+                  <SubmitButton
+                    pendingText="Removendo…"
+                    className="text-[11px] text-slate-400 hover:text-red-500 disabled:opacity-60"
+                  >
                     remover
-                  </button>
+                  </SubmitButton>
                 </form>
               )}
             </div>
@@ -216,6 +232,18 @@ export default async function CourseDetailPage({
             </SubmitButton>
           </div>
         </ResetForm>
+      )}
+
+      {/* Edição do conteúdo (gestor) + Salvar ao final da aba */}
+      {canManage && (
+        <div className="mt-4 space-y-2 border-t border-slate-100 pt-4">
+          <AiContentForm trainingId={course.id} />
+          <CourseContentEditor
+            trainingId={course.id}
+            content={course.content}
+            canManage={true}
+          />
+        </div>
       )}
     </div>
   );
@@ -284,9 +312,12 @@ export default async function CourseDetailPage({
                 <form action={deleteQuestionAction}>
                   <input type="hidden" name="id" value={q.id} />
                   <input type="hidden" name="training_id" value={course.id} />
-                  <button className="text-[11px] text-slate-400 hover:text-red-500">
+                  <SubmitButton
+                    pendingText="Removendo…"
+                    className="text-[11px] text-slate-400 hover:text-red-500 disabled:opacity-60"
+                  >
                     remover
-                  </button>
+                  </SubmitButton>
                 </form>
               </div>
             ))}
@@ -324,6 +355,17 @@ export default async function CourseDetailPage({
               Adicionar questão
             </SubmitButton>
           </ResetForm>
+
+          {/* Salvar ao final da aba Avaliação */}
+          <form action={touchCourseAction} className="mt-4 border-t border-slate-100 pt-4">
+            <input type="hidden" name="training_id" value={course.id} />
+            <SubmitButton
+              pendingText="Salvando…"
+              className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+            >
+              💾 Salvar
+            </SubmitButton>
+          </form>
         </div>
       )}
     </div>
@@ -345,10 +387,13 @@ export default async function CourseDetailPage({
             <input type="hidden" name="training_id" value={course.id} />
             <select
               name="tutor_id"
+              required
               defaultValue={course.tutor_id ?? ""}
               className="rounded-lg border border-slate-300 px-2 py-1 text-xs outline-none focus:border-azul"
             >
-              <option value="">— sem tutor —</option>
+              <option value="" disabled>
+                — selecione o tutor (obrigatório) —
+              </option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.name}
@@ -489,6 +534,26 @@ export default async function CourseDetailPage({
           </SubmitButton>
         </form>
       )}
+
+      {/* Salvar + Publicar Treinamento ao final da aba Fórum (gestor) */}
+      {canManage && (
+        <div className="space-y-3 border-t border-slate-100 pt-4">
+          <form action={touchCourseAction}>
+            <input type="hidden" name="training_id" value={course.id} />
+            <SubmitButton
+              pendingText="Salvando…"
+              className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+            >
+              💾 Salvar
+            </SubmitButton>
+          </form>
+          <PublishCourseForm
+            trainingId={course.id}
+            published={course.published === true}
+            missing={missing}
+          />
+        </div>
+      )}
     </div>
   );
 
@@ -571,12 +636,37 @@ export default async function CourseDetailPage({
         {canManage && (
           <form action={deleteCourseAction}>
             <input type="hidden" name="id" value={course.id} />
-            <button className="text-xs text-slate-400 hover:text-red-500">
+            <SubmitButton
+              pendingText="Excluindo…"
+              className="text-xs text-slate-400 hover:text-red-500 disabled:opacity-60"
+            >
               excluir curso
-            </button>
+            </SubmitButton>
           </form>
         )}
       </div>
+
+      {/* Status de publicação (gestor) */}
+      {canManage && (
+        <div
+          className={`mb-3 rounded-lg px-3 py-2 text-sm ${
+            course.published
+              ? "bg-emerald-50 text-emerald-700"
+              : "bg-amber-50 text-amber-800"
+          }`}
+        >
+          {course.published ? (
+            <>✓ Publicado — visível para os usuários.</>
+          ) : (
+            <>
+              📝 Rascunho — não publicado.{" "}
+              {missing.length > 0
+                ? `Faltam: ${missing.join(", ")}.`
+                : "Pronto para publicar na aba Fórum."}
+            </>
+          )}
+        </div>
+      )}
 
       <div className="mb-5 rounded-xl border border-slate-200 bg-white p-5">
         <div className="flex flex-wrap items-center gap-2">

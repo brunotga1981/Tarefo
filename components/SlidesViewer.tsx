@@ -8,9 +8,11 @@ import type { Slide } from "@/lib/lms";
 export function SlidesViewer({
   trainingId,
   slides,
+  canDownload = false,
 }: {
   trainingId: string;
   slides: Slide[];
+  canDownload?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [i, setI] = useState(0);
@@ -47,12 +49,14 @@ export function SlidesViewer({
           >
             ▶ Ver apresentação
           </button>
-          <a
-            href={`/api/trainings/${trainingId}/pptx`}
-            className="rounded-lg border border-azul px-3 py-1.5 text-xs font-semibold text-azul hover:bg-azul-suave/20"
-          >
-            ⬇ Baixar PowerPoint (.pptx)
-          </a>
+          {canDownload && (
+            <a
+              href={`/api/trainings/${trainingId}/pptx`}
+              className="rounded-lg border border-azul px-3 py-1.5 text-xs font-semibold text-azul hover:bg-azul-suave/20"
+            >
+              ⬇ Baixar PowerPoint (.pptx)
+            </a>
+          )}
         </div>
       </div>
 

@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { query } from "@/lib/db";
 import { getCurrentUser, can } from "@/lib/auth";
 import { saveUpload } from "@/lib/upload";
-import { PASS_SCORE } from "@/lib/lms";
+import { PASS_SCORE, getCourse, courseMissingItems } from "@/lib/lms";
 import {
   generateQuizWithAI,
   generateCourseContent,
@@ -18,6 +18,7 @@ export type AiQuizState = { error?: string; created?: number };
 export type AiContentState = { error?: string; ok?: boolean };
 export type AiImageState = { error?: string; ok?: boolean };
 export type AiSlidesState = { error?: string; created?: number };
+export type PublishState = { error?: string; missing?: string[]; ok?: boolean };
 
 async function requireManage() {
   const user = await getCurrentUser();
@@ -39,8 +40,8 @@ export async function createCourseAction(fd: FormData) {
     imageUrl = (await saveUpload(file, "curso")).url;
   }
   const rows = await query<{ id: string }>(
-    `INSERT INTO trainings (title, theme, subtheme, description, image_url, mandatory, group_id, deadline, tutor_id)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
+    `INSERT INTO trainings (title, theme, subtheme, description, image_url, mandatory, group_id, deadline, tutor_id, published)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9, false) RETURNING id`,
     [
       title,
       str(fd, "theme") || null,
@@ -55,6 +56,59 @@ export async function createCourseAction(fd: FormData) {
   );
   revalidatePath("/treinamentos");
   redirect(`/treinamentos/${rows[0].id}`);
+}
+
+// ---- Publicar treinamento (só após 100% finalizado) ----
+export async function publishCourseAction(
+  _prev: PublishState,
+  fd: FormData
+): Promise<PublishState> {
+  await requireManage();
+  const trainingId = str(fd, "training_id");
+  if (!trainingId) return { error: "Curso inválido." };
+
+  const course = await getCourse(trainingId);
+  if (!course) return { error: "Curso não encontrado." };
+  const qc = await query<{ c: number }>(
+    `SELECT count(*)::int AS c FROM training_questions WHERE training_id=$1`,
+    [trainingId]
+  );
+  const missing = courseMissingItems(course, qc[0]?.c ?? 0);
+  if (missing.length > 0) {
+    return {
+      missing,
+      error: "Finalize os itens obrigatórios antes de publicar.",
+    };
+  }
+
+  const wasPublished = course.published === true;
+  await query(`UPDATE trainings SET published=true WHERE id=$1`, [trainingId]);
+
+  // Ao publicar um novo curso, anuncia na Time Line (com a imagem do curso).
+  if (!wasPublished) {
+    const user = await getCurrentUser();
+    const body =
+      `Atenção - Novo Curso disponibilizado no ambiente de treinamento!\n` +
+      `Atente-se a obrigatoriedade e acumule Scores!!! Tutor do Curso: ${course.tutor_name ?? "—"}`;
+    await query(
+      `INSERT INTO timeline_posts (kind, author_id, author_name, body, image_url, course_id)
+       VALUES ('POST',$1,$2,$3,$4,$5)`,
+      [user?.id ?? null, user?.name ?? "Treinamentos", body, course.image_url, trainingId]
+    );
+    revalidatePath("/intranet/timeline");
+  }
+
+  revalidatePath(`/treinamentos/${trainingId}`);
+  revalidatePath("/treinamentos");
+  return { ok: true };
+}
+
+// ---- Salvar/atualizar etapa (botão "Salvar" ao final das abas) ----
+export async function touchCourseAction(fd: FormData) {
+  await requireManage();
+  const trainingId = str(fd, "training_id");
+  if (!trainingId) return;
+  revalidatePath(`/treinamentos/${trainingId}`);
 }
 
 export async function deleteCourseAction(fd: FormData) {

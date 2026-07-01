@@ -1,18 +1,19 @@
 import { NextRequest } from "next/server";
 import PptxGenJS from "pptxgenjs";
 import { query } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, can } from "@/lib/auth";
 import type { Slide } from "@/lib/lms";
 
 export const dynamic = "force-dynamic";
 
-// Gera e baixa a apresentação do curso em PowerPoint (.pptx).
+// Gera e baixa a apresentação do curso em PowerPoint (.pptx). Só administradores.
 export async function GET(
   _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   const user = await getCurrentUser();
   if (!user) return new Response("Não autenticado", { status: 401 });
+  if (!can(user, "access.manage")) return new Response("Acesso restrito", { status: 403 });
 
   const rows = await query<{ title: string; slides: Slide[] | null }>(
     `SELECT title, slides FROM trainings WHERE id=$1`,

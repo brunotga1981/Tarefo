@@ -56,11 +56,26 @@ export type Course = {
   tutor_id?: string | null;
   tutor_name?: string | null;
   slides?: Slide[] | null;
+  published?: boolean;
   material_count?: number;
   question_count?: number;
   my_passed?: boolean;
   my_score?: number | null;
 };
+
+/** Itens obrigatórios que faltam para o curso poder ser publicado. */
+export function courseMissingItems(
+  course: Course,
+  questionCount: number
+): string[] {
+  const missing: string[] = [];
+  if (!course.image_url) missing.push("Imagem");
+  if (!course.content?.trim()) missing.push("Conteúdo");
+  if (!course.slides?.length) missing.push("Apresentação");
+  if (questionCount < 1) missing.push("Quiz");
+  if (!course.tutor_id) missing.push("Tutor");
+  return missing;
+}
 
 export type Material = {
   id: string;
@@ -77,16 +92,22 @@ export type Question = {
   options: { id: string; text: string; is_correct: boolean; order: number }[];
 };
 
-export async function listCourses(userId: string): Promise<Course[]> {
+export async function listCourses(
+  userId: string,
+  opts: { canManage?: boolean } = {}
+): Promise<Course[]> {
+  // Usuários comuns só veem cursos publicados; quem gerencia vê todos (rascunhos incluídos).
+  const where = opts.canManage ? "" : "WHERE t.published";
   return query<Course>(
     `SELECT t.id, t.title, t.theme, t.subtheme, t.description, t.content, t.image_url,
-       t.mandatory, t.group_id, t.deadline, g.name AS group_name,
+       t.mandatory, t.group_id, t.deadline, t.published, g.name AS group_name,
        (SELECT count(*)::int FROM training_materials m WHERE m.training_id=t.id) AS material_count,
        (SELECT count(*)::int FROM training_questions q WHERE q.training_id=t.id) AS question_count,
        COALESCE((SELECT passed FROM training_completions c WHERE c.training_id=t.id AND c.user_id=$1), false) AS my_passed,
        (SELECT score FROM training_completions c WHERE c.training_id=t.id AND c.user_id=$1) AS my_score
      FROM trainings t
      LEFT JOIN groups g ON g.id = t.group_id
+     ${where}
      ORDER BY t.theme NULLS LAST, t.subtheme NULLS LAST, t.title`,
     [userId]
   );
@@ -95,7 +116,7 @@ export async function listCourses(userId: string): Promise<Course[]> {
 export async function getCourse(id: string): Promise<Course | null> {
   const rows = await query<Course>(
     `SELECT t.id, t.title, t.theme, t.subtheme, t.description, t.content, t.image_url,
-       t.mandatory, t.group_id, t.deadline, t.slides, t.tutor_id,
+       t.mandatory, t.group_id, t.deadline, t.slides, t.tutor_id, t.published,
        g.name AS group_name, tu.name AS tutor_name
      FROM trainings t
      LEFT JOIN groups g ON g.id = t.group_id
@@ -277,8 +298,11 @@ export const TIER_STYLE: Record<string, string> = {
 
 export async function getRanking(): Promise<RankRow[]> {
   const total =
-    (await query<{ c: number }>(`SELECT count(*)::int AS c FROM trainings`))[0]
-      ?.c ?? 0;
+    (
+      await query<{ c: number }>(
+        `SELECT count(*)::int AS c FROM trainings WHERE published`
+      )
+    )[0]?.c ?? 0;
 
   const rows = await query<{
     id: string;

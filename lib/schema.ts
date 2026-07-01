@@ -265,6 +265,9 @@ ALTER TABLE trainings ADD COLUMN IF NOT EXISTS group_id text REFERENCES groups(i
 ALTER TABLE trainings ADD COLUMN IF NOT EXISTS deadline date;
 -- Apresentação (slides) gerada a partir do conteúdo do curso
 ALTER TABLE trainings ADD COLUMN IF NOT EXISTS slides jsonb;
+-- Publicação do curso: só fica visível aos usuários depois de finalizado.
+-- Default true para não ocultar cursos já existentes; novos entram como rascunho.
+ALTER TABLE trainings ADD COLUMN IF NOT EXISTS published boolean NOT NULL DEFAULT true;
 -- Tutor de dúvidas do fórum do curso
 ALTER TABLE trainings ADD COLUMN IF NOT EXISTS tutor_id text REFERENCES users(id) ON DELETE SET NULL;
 

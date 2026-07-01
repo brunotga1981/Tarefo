@@ -15,7 +15,7 @@ export default async function TreinamentosPage() {
   const user = await getCurrentUser();
   const canManage = can(user, "trainings.manage");
   const [courses, ranking, groups, users] = await Promise.all([
-    listCourses(user!.id),
+    listCourses(user!.id, { canManage }),
     getRanking(),
     canManage
       ? query<{ id: string; name: string }>(`SELECT id, name FROM groups ORDER BY name`)
@@ -210,11 +210,18 @@ export default async function TreinamentosPage() {
                     )}
                   </div>
                   <div className="flex flex-1 flex-col p-4">
-                    {c.subtheme && (
-                      <span className="mb-1 w-fit rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-500">
-                        {c.subtheme}
-                      </span>
-                    )}
+                    <div className="mb-1 flex flex-wrap gap-1">
+                      {c.subtheme && (
+                        <span className="w-fit rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-500">
+                          {c.subtheme}
+                        </span>
+                      )}
+                      {c.published === false && (
+                        <span className="w-fit rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                          📝 Rascunho
+                        </span>
+                      )}
+                    </div>
                     <h4 className="font-semibold text-azul-navy">{c.title}</h4>
                     <div className="mt-2 flex items-center justify-between text-[11px] text-slate-400">
                       <span>

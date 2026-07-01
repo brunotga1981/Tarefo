@@ -71,7 +71,7 @@ async function computeNotifications(userId: string): Promise<Notifications> {
   // Treinamentos disponíveis ainda não aprovados pelo usuário (some quando aprova).
   const treino = await query<{ count: number }>(
     `SELECT count(*)::int AS count FROM trainings t
-     WHERE NOT EXISTS (
+     WHERE t.published AND NOT EXISTS (
        SELECT 1 FROM training_completions c
        WHERE c.training_id = t.id AND c.user_id = $1 AND c.passed
      )`,
