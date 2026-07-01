@@ -376,6 +376,10 @@ CREATE TABLE IF NOT EXISTS blog_posts (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- Mídia (image | video), agendamento (início) do Conheça Mais
+ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS media_type text NOT NULL DEFAULT 'image';
+ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS publish_at timestamptz;
+
 -- Comentários das postagens do Conheça Mais (blog)
 CREATE TABLE IF NOT EXISTS blog_comments (
   id text PRIMARY KEY DEFAULT gen_random_uuid()::text,

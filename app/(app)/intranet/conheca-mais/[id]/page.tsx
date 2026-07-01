@@ -35,13 +35,21 @@ export default async function BlogPostPage({
         Publicado em {formatDate(post.created_at)}
       </p>
 
-      {post.image_url && (
-        <img
-          src={post.image_url}
-          alt={post.title}
-          className="mt-4 max-h-96 w-full rounded-xl object-cover"
-        />
-      )}
+      {post.image_url &&
+        (post.media_type === "video" ? (
+          <video
+            src={post.image_url}
+            controls
+            playsInline
+            className="mt-4 max-h-96 w-full rounded-xl bg-black object-contain"
+          />
+        ) : (
+          <img
+            src={post.image_url}
+            alt={post.title}
+            className="mt-4 max-h-96 w-full rounded-xl object-cover"
+          />
+        ))}
 
       {post.summary && (
         <p className="mt-4 text-lg text-slate-600">{post.summary}</p>
