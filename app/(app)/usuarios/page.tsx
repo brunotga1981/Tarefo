@@ -57,6 +57,16 @@ function UserFields({
         />
       </div>
       <div>
+        <label className={label}>Cargo</label>
+        <input
+          name="cargo"
+          required
+          placeholder="Ex.: Analista de RH"
+          defaultValue={u?.cargo ?? ""}
+          className={field}
+        />
+      </div>
+      <div>
         <label className={label}>Perfil de acesso</label>
         <select name="profile_id" defaultValue={u?.profile_id ?? ""} className={field}>
           <option value="">— Perfil —</option>
@@ -247,6 +257,11 @@ export default async function UsuariosPage({
                     </span>
                   )}
                 </div>
+                {u.cargo && (
+                  <p className="text-xs font-semibold text-azul-navy">
+                    💼 {u.cargo}
+                  </p>
+                )}
                 <p className="text-xs text-slate-500">
                   {u.email}
                   {u.work_location ? ` · ${u.work_location}` : ""}

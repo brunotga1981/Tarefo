@@ -22,6 +22,7 @@ export type UserFull = {
   email: string;
   profile_id: string | null;
   profile_name: string | null;
+  cargo: string | null;
   birth_date: string | null;
   team: string | null;
   vertical: string[];
@@ -34,7 +35,7 @@ export type UserFull = {
 export async function listUsersFull(): Promise<UserFull[]> {
   return query<UserFull>(
     `SELECT u.id, u.name, u.email, u.profile_id, p.name AS profile_name,
-            u.birth_date, u.team, u.vertical, u.ramal, u.phone,
+            u.cargo, u.birth_date, u.team, u.vertical, u.ramal, u.phone,
             u.work_location, u.active
      FROM users u LEFT JOIN profiles p ON p.id = u.profile_id
      ORDER BY u.active DESC, u.name`

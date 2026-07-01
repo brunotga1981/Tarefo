@@ -203,6 +203,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS birth_date date;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS phone text;
 
 -- Cadastro completo de usuários
+ALTER TABLE users ADD COLUMN IF NOT EXISTS cargo text;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS team text;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS vertical text[] NOT NULL DEFAULT '{}';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS ramal text;

@@ -68,6 +68,7 @@ function userFields(fd: FormData) {
   return {
     name: str(fd, "name"),
     email: str(fd, "email"),
+    cargo: str(fd, "cargo") || null,
     profileId: str(fd, "profile_id") || null,
     birthDate: str(fd, "birth_date") || null,
     team: str(fd, "team") || null,
@@ -82,7 +83,7 @@ export async function createUserAction(fd: FormData) {
   await requirePerm("users.manage");
   const f = userFields(fd);
   const password = str(fd, "password");
-  if (!f.name || !f.email || !password) return;
+  if (!f.name || !f.email || !f.cargo || !password) return; // cargo é obrigatório
 
   const exists = await query(`SELECT 1 FROM users WHERE lower(email)=lower($1)`, [
     f.email,
@@ -91,14 +92,15 @@ export async function createUserAction(fd: FormData) {
 
   const rows = await query<{ id: string }>(
     `INSERT INTO users
-       (name, email, role, password_hash, profile_id, birth_date, team, vertical, ramal, phone, work_location)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
+       (name, email, role, password_hash, profile_id, cargo, birth_date, team, vertical, ramal, phone, work_location)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id`,
     [
       f.name,
       f.email,
       "Membro",
       hashPassword(password),
       f.profileId,
+      f.cargo,
       f.birthDate,
       f.team,
       f.vertical,
@@ -118,7 +120,7 @@ export async function updateUserAction(fd: FormData) {
   const id = str(fd, "id");
   if (!id) return;
   const f = userFields(fd);
-  if (!f.name || !f.email) return;
+  if (!f.name || !f.email || !f.cargo) return; // cargo é obrigatório
 
   // Equipe anterior, para ajustar o vínculo de grupo se mudou
   const prev = await query<{ team: string | null }>(
@@ -129,14 +131,15 @@ export async function updateUserAction(fd: FormData) {
 
   await query(
     `UPDATE users SET
-       name=$2, email=$3, profile_id=$4, birth_date=$5, team=$6,
-       vertical=$7, ramal=$8, phone=$9, work_location=$10
+       name=$2, email=$3, profile_id=$4, cargo=$5, birth_date=$6, team=$7,
+       vertical=$8, ramal=$9, phone=$10, work_location=$11
      WHERE id=$1`,
     [
       id,
       f.name,
       f.email,
       f.profileId,
+      f.cargo,
       f.birthDate,
       f.team,
       f.vertical,

@@ -10,6 +10,7 @@ type Contact = {
   id: string;
   name: string;
   email: string;
+  cargo: string | null;
   phone: string | null;
   ramal: string | null;
   team: string | null;
@@ -58,7 +59,7 @@ export default async function ContatosPage({
   }
 
   const contacts = await query<Contact>(
-    `SELECT u.id, u.name, u.email, u.phone, u.ramal, u.team, u.work_location,
+    `SELECT u.id, u.name, u.email, u.cargo, u.phone, u.ramal, u.team, u.work_location,
             u.vertical, COALESCE(u.presence,'Disponível') AS presence,
             p.name AS profile_name
      FROM users u LEFT JOIN profiles p ON p.id = u.profile_id
@@ -156,6 +157,11 @@ export default async function ContatosPage({
                 </div>
                 <div className="min-w-0">
                   <p className="truncate font-medium text-slate-800">{c.name}</p>
+                  {c.cargo && (
+                    <p className="truncate text-xs font-semibold text-azul-navy">
+                      💼 {c.cargo}
+                    </p>
+                  )}
                   {(c.profile_name || c.team) && (
                     <p className="text-[11px] text-slate-400">
                       {[c.profile_name, c.team].filter(Boolean).join(" · ")}
