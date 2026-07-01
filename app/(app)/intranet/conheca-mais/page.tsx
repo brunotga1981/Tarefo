@@ -130,14 +130,22 @@ export default async function ConhecaMaisPage() {
                       >
                         Ler mais →
                       </Link>
-                      {canManage && (
-                        <form action={deleteBlogPostAction}>
-                          <input type="hidden" name="id" value={p.id} />
-                          <button className="text-xs text-slate-400 hover:text-red-500">
-                            excluir
-                          </button>
-                        </form>
-                      )}
+                      <div className="flex items-center gap-3">
+                        <span
+                          className="text-xs text-slate-400"
+                          title="Visualizações"
+                        >
+                          👁 {p.view_count ?? 0}
+                        </span>
+                        {canManage && (
+                          <form action={deleteBlogPostAction}>
+                            <input type="hidden" name="id" value={p.id} />
+                            <button className="text-xs text-slate-400 hover:text-red-500">
+                              excluir
+                            </button>
+                          </form>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -10,6 +10,7 @@ export type BlogPost = {
   media_type: string | null; // 'image' | 'video'
   publish_at: string | null;
   created_at: string;
+  view_count?: number;
 };
 
 /** Lista as postagens. Por padrão oculta as agendadas para o futuro; quem
@@ -19,21 +20,39 @@ export async function listBlogPosts(
 ): Promise<BlogPost[]> {
   const where = opts.canManage
     ? ""
-    : "WHERE publish_at IS NULL OR publish_at <= now()";
+    : "WHERE p.publish_at IS NULL OR p.publish_at <= now()";
   return query<BlogPost>(
-    `SELECT id, title, theme, summary, content, image_url, media_type, publish_at, created_at
-     FROM blog_posts ${where}
-     ORDER BY COALESCE(publish_at, created_at) DESC`
+    `SELECT p.id, p.title, p.theme, p.summary, p.content, p.image_url, p.media_type,
+            p.publish_at, p.created_at,
+            (SELECT count(*)::int FROM blog_views v WHERE v.post_id = p.id) AS view_count
+     FROM blog_posts p ${where}
+     ORDER BY COALESCE(p.publish_at, p.created_at) DESC`
   );
 }
 
 export async function getBlogPost(id: string): Promise<BlogPost | null> {
   const rows = await query<BlogPost>(
-    `SELECT id, title, theme, summary, content, image_url, media_type, publish_at, created_at
-     FROM blog_posts WHERE id = $1`,
+    `SELECT p.id, p.title, p.theme, p.summary, p.content, p.image_url, p.media_type,
+            p.publish_at, p.created_at,
+            (SELECT count(*)::int FROM blog_views v WHERE v.post_id = p.id) AS view_count
+     FROM blog_posts p WHERE p.id = $1`,
     [id]
   );
   return rows[0] ?? null;
+}
+
+/** Registra a visualização de uma postagem por um usuário (1 por usuário).
+ *  Retorna true se foi uma visualização nova (contabilizada). */
+export async function markBlogViewed(
+  postId: string,
+  userId: string
+): Promise<boolean> {
+  const rows = await query(
+    `INSERT INTO blog_views (post_id, user_id) VALUES ($1,$2)
+     ON CONFLICT DO NOTHING RETURNING post_id`,
+    [postId, userId]
+  );
+  return rows.length > 0;
 }
 
 export type BlogComment = {

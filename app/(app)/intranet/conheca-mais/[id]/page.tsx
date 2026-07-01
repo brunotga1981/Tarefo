@@ -3,7 +3,8 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getBlogPost, listBlogComments } from "@/lib/blog";
+import { getCurrentUser } from "@/lib/auth";
+import { getBlogPost, listBlogComments, markBlogViewed } from "@/lib/blog";
 import { formatDate } from "@/lib/format";
 import { BlogComments } from "@/components/blog/BlogComments";
 
@@ -14,6 +15,12 @@ export default async function BlogPostPage({
 }) {
   const post = await getBlogPost(params.id);
   if (!post) notFound();
+  const user = await getCurrentUser();
+  // Registra a visualização (1 por usuário) e reflete no total exibido.
+  if (user) {
+    const isNew = await markBlogViewed(post.id, user.id);
+    if (isNew) post.view_count = (post.view_count ?? 0) + 1;
+  }
   const comments = await listBlogComments(post.id);
 
   return (
@@ -31,8 +38,9 @@ export default async function BlogPostPage({
         </span>
       )}
       <h1 className="mt-2 text-3xl font-bold text-azul-navy">{post.title}</h1>
-      <p className="mt-1 text-xs text-slate-400">
-        Publicado em {formatDate(post.created_at)}
+      <p className="mt-1 flex items-center gap-2 text-xs text-slate-400">
+        <span>Publicado em {formatDate(post.created_at)}</span>
+        <span title="Visualizações">👁 {post.view_count ?? 0}</span>
       </p>
 
       {post.image_url &&
