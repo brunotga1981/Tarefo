@@ -4,7 +4,14 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { getCurrentUser, can } from "@/lib/auth";
 import { query } from "@/lib/db";
-import { listCourses, getRanking, TIER_STYLE, type Course } from "@/lib/lms";
+import {
+  listCourses,
+  getRanking,
+  getPendingForumForUser,
+  TIER_STYLE,
+  type Course,
+} from "@/lib/lms";
+import { formatDateTime } from "@/lib/format";
 import { SubmitButton } from "@/components/tarefo/SubmitButton";
 import { createCourseAction } from "./actions";
 
@@ -14,6 +21,7 @@ const field =
 export default async function TreinamentosPage() {
   const user = await getCurrentUser();
   const canManage = can(user, "trainings.manage");
+  const pendingForum = await getPendingForumForUser(user!.id);
   const [courses, ranking, groups, users] = await Promise.all([
     listCourses(user!.id, { canManage }),
     getRanking(),
@@ -39,6 +47,39 @@ export default async function TreinamentosPage() {
       <p className="mb-6 text-sm text-slate-500">
         Ranking de engajamento e catálogo de cursos.
       </p>
+
+      {/* Painel do tutor: dúvidas do fórum aguardando resposta */}
+      {pendingForum.length > 0 && (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <h2 className="mb-2 text-sm font-semibold text-amber-800">
+            💭 Dúvidas do fórum aguardando sua resposta ({pendingForum.length})
+          </h2>
+          <div className="space-y-2">
+            {pendingForum.map((q) => (
+              <Link
+                key={q.post_id}
+                href={`/treinamentos/${q.training_id}?tab=forum`}
+                className="block rounded-lg border border-amber-100 bg-white p-3 hover:border-amber-300"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-azul-navy">
+                    {q.course_title}
+                  </span>
+                  <span className="text-[11px] text-slate-400">
+                    {formatDateTime(q.created_at)}
+                  </span>
+                </div>
+                <p className="mt-1 line-clamp-2 text-sm text-slate-700">
+                  <span className="font-medium">{q.author_name}:</span> {q.body}
+                </p>
+                <span className="mt-1 inline-block text-xs font-semibold text-amber-700">
+                  Responder no fórum →
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Meu painel */}
       {me && (

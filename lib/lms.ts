@@ -261,6 +261,31 @@ export async function getMyTrainingRatings(
   return map;
 }
 
+/** Dúvidas do fórum aguardando resposta do tutor (para o painel do tutor). */
+export type PendingForum = {
+  training_id: string;
+  course_title: string;
+  post_id: string;
+  author_name: string;
+  body: string;
+  created_at: string;
+};
+export async function getPendingForumForUser(
+  userId: string
+): Promise<PendingForum[]> {
+  return query<PendingForum>(
+    `SELECT f.training_id, t.title AS course_title, f.id AS post_id,
+            f.author_name, f.body, f.created_at
+     FROM training_forum f
+     JOIN trainings t ON t.id = f.training_id AND t.tutor_id = $1
+     WHERE f.parent_id IS NULL AND f.user_id IS DISTINCT FROM $1
+       AND NOT EXISTS (SELECT 1 FROM training_forum a
+                       WHERE a.parent_id = f.id AND a.user_id = $1)
+     ORDER BY f.created_at ASC`,
+    [userId]
+  );
+}
+
 // ---- Ranking / categorias ----
 export type RankRow = {
   id: string;

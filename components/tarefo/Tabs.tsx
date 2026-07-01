@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 export function Tabs({
   tabs,
@@ -14,6 +14,15 @@ export function Tabs({
       ? initialKey
       : tabs[0]?.key;
   const [active, setActive] = useState(startKey);
+
+  // Quando o alerta do topo leva para ?tab=forum (mesmo já estando na página),
+  // o servidor re-renderiza passando um novo initialKey — troque a aba ativa.
+  useEffect(() => {
+    if (initialKey && tabs.some((t) => t.key === initialKey)) {
+      setActive(initialKey);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialKey]);
   return (
     <div>
       <div className="flex flex-wrap gap-1 border-b border-slate-200">
