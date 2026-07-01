@@ -12,6 +12,8 @@ import {
   computeTMR,
   listShareTargets,
   hasRated,
+  listUnreadDMSenders,
+  listUnreadGroups,
   PRESENCE_OPTIONS,
   PRESENCE_DOT,
 } from "@/lib/chat";
@@ -57,6 +59,13 @@ export default async function TorpedoPage({
     : [];
   // Marca a conversa aberta como lida (limpa o alerta dela).
   if (conversation) await markConversationRead(conversation.id, user.id);
+
+  // Mensagens não lidas: destaca o remetente na lista (DMs) e os grupos.
+  // Calculado depois de marcar como lida, para não destacar a conversa aberta.
+  const [unreadDM, unreadGroups] = await Promise.all([
+    listUnreadDMSenders(user.id),
+    listUnreadGroups(user.id),
+  ]);
   const rac =
     conversation?.type === "CLIENT" && conversation.client_id
       ? await getClientRAC(conversation.client_id)
@@ -109,34 +118,66 @@ export default async function TorpedoPage({
         </form>
 
         <Section title="Mensagens diretas">
-          {others.map((u) => (
-            <form key={u.id} action={openDMAction}>
-              <input type="hidden" name="user_id" value={u.id} />
-              <button className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-slate-600 hover:bg-slate-100">
-                <span className="relative">
-                  <Avatar name={u.name} />
-                  <span
-                    className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white ${PRESENCE_DOT[u.presence]}`}
-                  />
-                </span>
-                {u.name}
-              </button>
-            </form>
-          ))}
+          {others.map((u) => {
+            const unread = unreadDM[u.id] ?? 0;
+            return (
+              <form key={u.id} action={openDMAction}>
+                <input type="hidden" name="user_id" value={u.id} />
+                <button
+                  className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-slate-100 ${
+                    unread
+                      ? "bg-azul-suave/40 font-semibold text-azul-navy"
+                      : "text-slate-600"
+                  }`}
+                >
+                  <span className="relative">
+                    <Avatar name={u.name} />
+                    <span
+                      className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white ${PRESENCE_DOT[u.presence]}`}
+                    />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">{u.name}</span>
+                  {unread > 0 && (
+                    <span
+                      className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold text-white"
+                      title={`${unread} mensagem(ns) nova(s)`}
+                    >
+                      {unread}
+                    </span>
+                  )}
+                </button>
+              </form>
+            );
+          })}
         </Section>
 
         <Section title="Grupos">
-          {groups.map((g) => (
-            <Link
-              key={g.id}
-              href={`/comunicacao?c=${g.id}`}
-              className={`block rounded-lg px-2 py-1.5 text-sm hover:bg-slate-100 ${
-                selectedId === g.id ? "bg-azul-suave/30 text-azul-navy" : "text-slate-600"
-              }`}
-            >
-              👪 {g.name}
-            </Link>
-          ))}
+          {groups.map((g) => {
+            const unread = selectedId === g.id ? 0 : unreadGroups[g.id] ?? 0;
+            return (
+              <Link
+                key={g.id}
+                href={`/comunicacao?c=${g.id}`}
+                className={`flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-slate-100 ${
+                  selectedId === g.id
+                    ? "bg-azul-suave/30 text-azul-navy"
+                    : unread
+                      ? "bg-azul-suave/40 font-semibold text-azul-navy"
+                      : "text-slate-600"
+                }`}
+              >
+                <span className="min-w-0 truncate">👪 {g.name}</span>
+                {unread > 0 && (
+                  <span
+                    className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold text-white"
+                    title={`${unread} mensagem(ns) nova(s)`}
+                  >
+                    {unread}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
           <details className="mt-1">
             <summary className="cursor-pointer px-2 text-xs text-azul">
               + Novo grupo

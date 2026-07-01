@@ -109,6 +109,48 @@ export async function listGroupsFor(userId: string): Promise<Conversation[]> {
   );
 }
 
+/** DMs com mensagens não lidas: mapa { outroUsuarioId -> quantidade }.
+ *  Usado para destacar o remetente na lista de usuários do Torpedo. */
+export async function listUnreadDMSenders(
+  userId: string
+): Promise<Record<string, number>> {
+  const rows = await query<{ other_id: string; count: number }>(
+    `SELECT other.user_id AS other_id, count(*)::int AS count
+     FROM messages m
+     JOIN conversations c ON c.id = m.conversation_id AND c.type = 'DM'
+     JOIN conversation_members mem ON mem.conversation_id = c.id AND mem.user_id = $1
+     JOIN conversation_members other ON other.conversation_id = c.id AND other.user_id <> $1
+     LEFT JOIN conversation_reads r ON r.conversation_id = c.id AND r.user_id = $1
+     WHERE m.author_id IS DISTINCT FROM $1
+       AND m.created_at > COALESCE(r.last_read_at, to_timestamp(0))
+     GROUP BY other.user_id`,
+    [userId]
+  );
+  const map: Record<string, number> = {};
+  for (const r of rows) map[r.other_id] = r.count;
+  return map;
+}
+
+/** Grupos com mensagens não lidas: mapa { conversationId -> quantidade }. */
+export async function listUnreadGroups(
+  userId: string
+): Promise<Record<string, number>> {
+  const rows = await query<{ conversation_id: string; count: number }>(
+    `SELECT c.id AS conversation_id, count(*)::int AS count
+     FROM messages m
+     JOIN conversations c ON c.id = m.conversation_id AND c.type = 'GROUP'
+     JOIN conversation_members mem ON mem.conversation_id = c.id AND mem.user_id = $1
+     LEFT JOIN conversation_reads r ON r.conversation_id = c.id AND r.user_id = $1
+     WHERE m.author_id IS DISTINCT FROM $1
+       AND m.created_at > COALESCE(r.last_read_at, to_timestamp(0))
+     GROUP BY c.id`,
+    [userId]
+  );
+  const map: Record<string, number> = {};
+  for (const r of rows) map[r.conversation_id] = r.count;
+  return map;
+}
+
 // Carrega a conversa e valida acesso. CLIENT é aberto a todos os usuários internos.
 export async function getConversation(
   id: string,
